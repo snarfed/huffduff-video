@@ -35,3 +35,5 @@ https://github.com/boto/boto
 even better, app engine GCS api expose a file object interface!
 https://cloud.google.com/appengine/docs/python/googlecloudstorageclient/functions#open
 
+similar project, embeds youtube-dl in app engine but only to get video metadata
+https://github.com/jaimeMF/youtube-dl-api-server
