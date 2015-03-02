@@ -20,6 +20,24 @@ it under the [CC0 license](http://creativecommons.org/publicdomain/zero/1.0/).
 
 ## Development notes
 
+CURRENT PROBLEM: extracting audio uses command line ffmpeg or avconv, which
+won't work on app engine. maybe switch to full VPS?
+
+digital ocean, EC2, google compute engine all charge ~$.01/hr for smallest
+instance, which is 1 (abstract) core + .5-1GB ram. amazon is free for 1y.
+
+http://aws.amazon.com/ec2/pricing/
+http://aws.amazon.com/free/
+https://cloud.google.com/compute/?hl=en_US#pricing
+https://www.digitalocean.com/pricing/
+
+AWS lambda (PaaS) would be nice but only supports Node.js right now. can run
+arbitary binaries if they come as node packages - they even mention node-ffmpeg
+as an example, and there's even a node youtube-dl package!
+http://aws.amazon.com/lambda/getting-started/
+http://aws.amazon.com/lambda/faqs/
+https://github.com/fent/node-youtube-dl
+
 using youtube-dl as library
 https://github.com/rg3/youtube-dl/blob/master/README.md#developer-instructions
 https://github.com/rg3/youtube-dl/issues/1129
@@ -37,3 +55,18 @@ https://cloud.google.com/appengine/docs/python/googlecloudstorageclient/function
 
 similar project, embeds youtube-dl in app engine but only to get video metadata
 https://github.com/jaimeMF/youtube-dl-api-server
+
+## AWS Setup
+
+Currently on EC2 t2.micro instance. Setup:
+
+```shell
+sudo yum install git python26-pip telnet tcsh
+sudo yum groupinstall 'Web Server' 'PHP Support'
+sudo pip install youtube_dl
+
+wget http://johnvansickle.com/ffmpeg/releases/ffmpeg-release-64bit-static.tar.xz
+cd /usr/local/bin
+sudo tar xJf ~/ffmpeg-release-64bit-static.tar.xz
+sudo ln -s ffmpeg-2.5.4-64bit-static/ffmpeg
+```
