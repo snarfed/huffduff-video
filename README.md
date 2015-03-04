@@ -61,12 +61,16 @@ https://github.com/jaimeMF/youtube-dl-api-server
 Currently on EC2 t2.micro instance. Setup:
 
 ```shell
-sudo yum install git python26-pip telnet tcsh
+sudo yum install git mod_wsgi python26-pip tcsh telnet
 sudo yum groupinstall 'Web Server' 'PHP Support'
-sudo pip install youtube_dl
+sudo pip install youtube_dl webapp2 webob
+
+sudo service httpd start
+sudo chkconfig httpd on
 
 wget http://johnvansickle.com/ffmpeg/releases/ffmpeg-release-64bit-static.tar.xz
 cd /usr/local/bin
 sudo tar xJf ~/ffmpeg-release-64bit-static.tar.xz
 sudo ln -s ffmpeg-2.5.4-64bit-static/ffmpeg
+sudo ln -s ffmpeg-2.5.4-64bit-static/ffprobe
 ```
