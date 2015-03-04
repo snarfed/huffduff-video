@@ -1,6 +1,3 @@
 [submodule "youtube-dl"]
 	path = youtube-dl
 	url = https://github.com/rg3/youtube-dl.git
-[submodule "appengine-gcs-client"]
-	path = appengine-gcs-client
-	url = https://github.com/GoogleCloudPlatform/appengine-gcs-client.git
