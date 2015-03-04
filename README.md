@@ -58,19 +58,50 @@ https://github.com/jaimeMF/youtube-dl-api-server
 
 ## AWS Setup
 
-Currently on EC2 t2.micro instance. Setup:
+Currently on EC2 t2.micro instance. Here's how to setup (but hopefully only for
+posterity since I snapshotted an image):
 
 ```shell
-sudo yum install git mod_wsgi python26-pip tcsh telnet
+sudo yum install git httpd-devel mod_wsgi python-devel python26-pip tcsh telnet
 sudo yum groupinstall 'Web Server' 'PHP Support'
 sudo pip install youtube_dl webapp2 webob
 
+# Amazon Linux  AMI has mod_wsgi 3.2, but we need 3.4 to prevent this error when
+# running youtube-dl under WSGI:
+# AttributeError: 'mod_wsgi.Log' object has no attribute 'isatty'
+curl -o mod_wsgi-3.4.tar.gz https://modwsgi.googlecode.com/files/mod_wsgi-3.4.tar.gz
+tar xvzf mod_wsgi-3.4.tar.gz
+cd mod_wsgi-3.4
+sudo yum install httpd-devel -y
+./configure
+sudo make install
+
+# add these lines to /etc/httpd/conf/httpd.conf
+#
+# # for huffduff-video
+# LoadModule wsgi_module /usr/lib64/httpd/modules/mod_wsgi.so
+# Options FollowSymLinks
+# WSGIScriptAlias /get /var/www/cgi-bin/app.py
+
+# start apache
 sudo service httpd start
 sudo chkconfig httpd on
 
+# install ffmpeg
 wget http://johnvansickle.com/ffmpeg/releases/ffmpeg-release-64bit-static.tar.xz
 cd /usr/local/bin
 sudo tar xJf ~/ffmpeg-release-64bit-static.tar.xz
+cd /usr/bin
 sudo ln -s ffmpeg-2.5.4-64bit-static/ffmpeg
 sudo ln -s ffmpeg-2.5.4-64bit-static/ffprobe
+
+# clone huffduff-video repo and install for apache
+cd ~
+mkdir src
+cd src
+git clone git@github.com:snarfed/huffduff-video.git
+
+cd /var/www/cgi-bin
+sudo ln -s ~/src/huffduff-video/app.py
+chmod a+rx ~/src
 ```
