@@ -64,7 +64,7 @@ posterity since I snapshotted an image):
 ```shell
 sudo yum install git httpd-devel mod_wsgi python-devel python26-pip tcsh telnet
 sudo yum groupinstall 'Web Server' 'PHP Support'
-sudo pip install webapp2 webob youtube-dl
+sudo pip install boto webapp2 webob youtube-dl
 
 # Amazon Linux  AMI has mod_wsgi 3.2, but we need 3.4 to prevent this error when
 # running youtube-dl under WSGI:
@@ -100,6 +100,7 @@ cd ~
 mkdir src
 cd src
 git clone git@github.com:snarfed/huffduff-video.git
+# create and fill in aws_key_id and aws_secret_key files
 
 cd /var/www/cgi-bin
 sudo ln -s ~/src/huffduff-video/app.py
