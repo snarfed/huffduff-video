@@ -93,10 +93,10 @@ window.location = "https://huffduffer.com/add?%s";
 </script>
 </body>
 </html>""" % urllib.urlencode({
-      'bookmark[url]': S3_BASE + s3_key,
-      'bookmark[title]': info.get('title', ''),
-      'bookmark[description]': description,
-      'bookmark[tags]': ','.join(info.get('categories', [])),
+      'bookmark[url]': (S3_BASE + s3_key).encode('utf-8'),
+      'bookmark[title]': info.get('title', '').encode('utf-8'),
+      'bookmark[description]': description.encode('utf-8'),
+      'bookmark[tags]': ','.join(info.get('categories', [])).encode('utf-8'),
     }))
 
     # alternative:
