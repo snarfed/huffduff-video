@@ -73,7 +73,7 @@ sudo yum install git httpd-devel mod_wsgi python-devel python26-pip tcsh telnet
 sudo yum groupinstall 'Web Server' 'PHP Support'
 sudo pip install boto webapp2 webob youtube-dl
 
-# Amazon Linux  AMI has mod_wsgi 3.2, but we need 3.4 to prevent this error when
+# Amazon Linux AMI has mod_wsgi 3.2, but we need 3.4 to prevent this error when
 # running youtube-dl under WSGI:
 # AttributeError: 'mod_wsgi.Log' object has no attribute 'isatty'
 curl -o mod_wsgi-3.4.tar.gz https://modwsgi.googlecode.com/files/mod_wsgi-3.4.tar.gz
@@ -105,11 +105,13 @@ sudo ln -s ffmpeg-2.5.4-64bit-static/ffprobe
 # clone huffduff-video repo and install for apache
 cd ~
 mkdir src
+chmod a+rx ~/src
 cd src
 git clone git@github.com:snarfed/huffduff-video.git
 # create and fill in aws_key_id and aws_secret_key files
 
 cd /var/www/cgi-bin
 sudo ln -s ~/src/huffduff-video/app.py
-chmod a+rx ~/src
+cd /var/www/html
+sudo ln -s ~/src/huffduff-video/static/index.html
 ```
