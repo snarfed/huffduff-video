@@ -119,12 +119,12 @@ Fetching %s <br />""" % (url, url)).encode('utf-8')
 window.location = "https://huffduffer.com/add?%s";
 </script>
 </body>
-</html>""" % urllib.urlencode({k: v.encode('utf-8') for k, v in
+</html>""" % urllib.urlencode((k, v.encode('utf-8')) for k, v in
       (('bookmark[url]', (S3_BASE + s3_key)),
        ('bookmark[title]', info.get('title', '')),
        ('bookmark[description]', description),
        ('bookmark[tags]', ','.join(info.get('categories', []))),
-     )})
+     ))
 
     # alternative:
     # http://themindfulbit.com/blog/optimizing-your-podcast-site-for-huffduffer
