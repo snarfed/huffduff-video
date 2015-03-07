@@ -31,7 +31,7 @@ posterity since I snapshotted an image):
 ```shell
 sudo yum install git httpd-devel mod_wsgi python-devel python26-pip tcsh telnet
 sudo yum groupinstall 'Web Server' 'PHP Support'
-sudo pip install boto webapp2 webob youtube-dl
+sudo pip install boto webob youtube-dl
 
 # Amazon Linux AMI has mod_wsgi 3.2, but we need 3.4 to prevent this error when
 # running youtube-dl under WSGI:
