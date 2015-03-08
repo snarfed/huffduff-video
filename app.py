@@ -84,6 +84,9 @@ Fetching %s...<br />""" % (url, url)).encode('utf-8')
       'outtmpl': '/tmp/%(webpage_url)s.%(ext)s',
       'restrictfilenames': True,  # don't allow & or spaces in file names
       'logger': logging,
+      # 'logtostderr': True,
+      'format': 'bestaudio/best',
+      'noplaylist': True,
       'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'mp3',
@@ -108,7 +111,6 @@ Fetching %s...<br />""" % (url, url)).encode('utf-8')
 
     if key.exists():
       yield 'Already downloaded! <br />'
-
     else:
       # download video and extract mp3
       yield ('Downloading to %s...<br />' % filename).encode('utf-8')
