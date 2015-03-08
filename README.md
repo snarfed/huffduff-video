@@ -49,6 +49,7 @@ sudo make install
 # LoadModule wsgi_module /usr/lib64/httpd/modules/mod_wsgi.so
 # Options FollowSymLinks
 # WSGIScriptAlias /get /var/www/cgi-bin/app.py
+# LogLevel info
 
 # start apache
 sudo service httpd start

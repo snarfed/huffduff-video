@@ -5,6 +5,7 @@ Short test video: http://youtu.be/6dyWlM4ej3Q
 
 __author__ = ['Ryan Barrett <huffduff-video@ryanb.org>']
 
+import contextlib
 import logging
 import os
 import re
@@ -43,7 +44,9 @@ def application(environ, start_response):
     start_response('400 Missing required parameter: url', headers)
     return
 
-  write = start_response('200 OK', headers)  # the write fn is used in progress_hook
+  write_fn = start_response('200 OK', headers)
+  def write(line):
+    write_fn(line.encode('utf-8'))
 
   def run():
     """Generator that does all the work and yields the response body lines.
@@ -61,7 +64,7 @@ window.setInterval(function() { window.scrollTo(0, document.body.scrollHeight); 
 </script>
 <body>
 <h1>huffduff-video</h1>
-Fetching %s...<br />""" % (url, url)).encode('utf-8')
+Fetching %s ...<br />""" % (url, url)).encode('utf-8')
 
     # function to print out status while downloading
     def progress_hook(progress):
@@ -77,7 +80,7 @@ Fetching %s...<br />""" % (url, url)).encode('utf-8')
           p('_speed_str'), p('_eta_str'))
       else:
         msg = status
-      write((msg + '<br />\n').encode('utf-8'))
+      write(msg + '<br />\n')
 
     # fetch video info (resolves URL) to see if we've already downloaded it
     ydl = youtube_dl.YoutubeDL({
@@ -94,7 +97,8 @@ Fetching %s...<br />""" % (url, url)).encode('utf-8')
       }],
       'progress_hooks': [progress_hook],
     })
-    info = ydl.extract_info(url, download=False)
+    with handle_errors(write):
+      info = ydl.extract_info(url, download=False)
 
     # prepare_filename() returns the video filename, not the postprocessed one,
     # so change the extension manually. the resulting filename will look like:
@@ -113,8 +117,9 @@ Fetching %s...<br />""" % (url, url)).encode('utf-8')
       yield 'Already downloaded! <br />'
     else:
       # download video and extract mp3
-      yield ('Downloading to %s...<br />' % filename).encode('utf-8')
-      ydl.download([url])
+      yield ('Downloading to %s ...<br />' % filename).encode('utf-8')
+      with handle_errors(write):
+        ydl.download([url])
 
       # upload to S3
       # http://docs.pythonboto.org/en/latest/s3_tut.html
@@ -143,3 +148,25 @@ window.location = "https://huffduffer.com/add?popup=true&%s";
     # http://themindfulbit.com/blog/optimizing-your-podcast-site-for-huffduffer
 
   return run()
+
+
+@contextlib.contextmanager
+def handle_errors(write):
+  """Wraps youtube_dl calls in a try/except and handles errors."""
+  try:
+    yield
+  except Exception, e:
+    logging.error('youtube-dl error: %s', e)
+    write('<p>%s</p>\n' % e)
+    if isinstance(e, (youtube_dl.DownloadError, youtube_dl.utils.ExtractorError)):
+      write("""\
+Here are the <a href="http://rg3.github.io/youtube-dl/supportedsites.html">
+supported sites</a>. If this site isn't supported, it may also post
+its videos on YouTube. Try there!
+</body>
+</html>
+""")
+      raise webob.exc.HTTPBadRequest()
+    else:
+      write('</body>\n</html>')
+      raise
