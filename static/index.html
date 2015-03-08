@@ -4,7 +4,7 @@
   <title>huffduff-video</title>
 </head>
 
-<body>
+<body style="text-align: center">
 <h1>huffduff-video</h1>
 
 <p>Extracts the audio from videos on YouTube, Vimeo, and
@@ -13,9 +13,13 @@ and sends it to <a href="http://huffduffer.com/">Huffduffer</a>.</p>
 
 <p>Add this bookmarklet to your browser and use it on any video page:</p>
 
-<p><a style="border: 1px solid blue; background-color: #acf; padding: .5em;
-             font-style: italic; text-decoration: none"
-   href="javascript:window.open('http://huffduff-video.snarfed.org/get?url='+encodeURIComponent(location.href));">huffduff-video!</a></p>
+<p style="margin: 1.5em">
+  <a style="border: 1px solid blue; padding: .5em; font-style: italic;
+            text-decoration: none; background-color: #acf"
+     href="javascript:var%20w=window.open('http://huffduff-video.snarfed.org/get?url='+encodeURIComponent(location.href),'huffduff','scrollbars=1,status=0,resizable=1,location=0,toolbar=0,width=360,height=480');">
+    huffduff-video!
+  </a>
+</p>
 
 <p>Source at <a href="https://github.com/snarfed/huffduff-video">
   github.com/snarfed/huffduff-video</a>.</p>

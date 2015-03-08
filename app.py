@@ -56,19 +56,30 @@ def application(environ, start_response):
 <!DOCTYPE html>
 <html>
 <head><title>huffduff-video: %s</title></head>
+<script type="text/javascript">
+window.setInterval(function() { window.scrollTo(0, document.body.scrollHeight); }, 500);
+</script>
 <body>
-Fetching %s <br />""" % (url, url)).encode('utf-8')
+<h1>huffduff-video</h1>
+Fetching %s...<br />""" % (url, url)).encode('utf-8')
 
-    # fetch video info (resolves URL) to see if we've already downloaded it
+    # function to print out status while downloading
     def progress_hook(progress):
-      if progress.get('status') == 'error':
+      status = progress.get('status')
+      if status == 'error':
         # we always get an 'error' progress when the video finishes downloading.
         # not sure why. ignore it.
         return
-      msg = ' '.join((progress.get(field) or '' for field in
-                     ('status', '_percent_str', '_speed_str ', '_eta_str')))
-      write((msg + '<br />').encode('utf-8'))
+      elif status == 'downloading':
+        p = lambda field: progress.get(field) or ''
+        msg = '%s of %s at %s in %s...' % (
+          p('_percent_str'), p('_total_bytes_str') or p('_total_bytes_estimate_str'),
+          p('_speed_str'), p('_eta_str'))
+      else:
+        msg = status
+      write((msg + '<br />\n').encode('utf-8'))
 
+    # fetch video info (resolves URL) to see if we've already downloaded it
     ydl = youtube_dl.YoutubeDL({
       'outtmpl': '/tmp/%(webpage_url)s.%(ext)s',
       'restrictfilenames': True,  # don't allow & or spaces in file names
@@ -100,12 +111,12 @@ Fetching %s <br />""" % (url, url)).encode('utf-8')
 
     else:
       # download video and extract mp3
-      yield ('Downloading to %s <br />' % filename).encode('utf-8')
+      yield ('Downloading to %s...<br />' % filename).encode('utf-8')
       ydl.download([url])
 
       # upload to S3
       # http://docs.pythonboto.org/en/latest/s3_tut.html
-      yield ('Uploading %s <br />' % s3_key).encode('utf-8')
+      yield ('Uploading %s...<br />' % s3_key).encode('utf-8')
       key.set_contents_from_filename(filename)
       key.make_public()
 
@@ -116,7 +127,7 @@ Fetching %s <br />""" % (url, url)).encode('utf-8')
 
     yield """\
 <script type="text/javascript">
-window.location = "https://huffduffer.com/add?%s";
+window.location = "https://huffduffer.com/add?popup=true&%s";
 </script>
 </body>
 </html>""" % urllib.urlencode([(k, v.encode('utf-8')) for k, v in
