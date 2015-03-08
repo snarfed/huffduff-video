@@ -84,7 +84,7 @@ Fetching %s...<br />""" % (url, url)).encode('utf-8')
       'outtmpl': '/tmp/%(webpage_url)s.%(ext)s',
       'restrictfilenames': True,  # don't allow & or spaces in file names
       'logger': logging,
-      # 'logtostderr': True,
+      'logtostderr': True,
       'format': 'bestaudio/best',
       'noplaylist': True,
       'postprocessors': [{
