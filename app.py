@@ -13,6 +13,7 @@ import urllib
 
 import boto
 import webob
+import webob.exc
 import youtube_dl
 
 
@@ -128,7 +129,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
       key.make_public()
 
     # open 'Huffduff it' page
-    description = info.get('description', '')
+    description = info.get('description') or ''
     if len(description) > 1500:
       description = description[:1500] + '...'
 
