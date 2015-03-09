@@ -139,9 +139,9 @@ window.location = "https://huffduffer.com/add?popup=true&%s";
 </body>
 </html>""" % urllib.urlencode([(k, v.encode('utf-8')) for k, v in
       (('bookmark[url]', (S3_BASE + s3_key)),
-       ('bookmark[title]', info.get('title', '')),
+       ('bookmark[title]', info.get('title') or ''),
        ('bookmark[description]', description),
-       ('bookmark[tags]', ','.join(info.get('categories', []))),
+       ('bookmark[tags]', ','.join(info.get('categories') or [])),
      )])
 
     # alternative:
