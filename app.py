@@ -37,13 +37,12 @@ def application(environ, start_response):
 
   # validate request
   if request.method not in ('GET', 'POST'):
-    start_response('405 Method must be GET or POST', headers)
-    return
+    return webob.exc.HTTPMethodNotAllowed()(environ, start_response)
 
   url = request.params.get('url')
   if not url:
-    start_response('400 Missing required parameter: url', headers)
-    return
+    return webob.exc.HTTPBadRequest('Missing required parameter: url')(
+      environ, start_response)
 
   write_fn = start_response('200 OK', headers)
   def write(line):
@@ -167,7 +166,6 @@ its videos on YouTube. Try there!
 </body>
 </html>
 """)
-      raise webob.exc.HTTPBadRequest()
     else:
       write('</body>\n</html>')
       raise
