@@ -163,9 +163,6 @@ def handle_errors(write):
 Here are the <a href="http://rg3.github.io/youtube-dl/supportedsites.html">
 supported sites</a>. If this site isn't supported, it may also post
 its videos on YouTube. Try there!
-</body>
-</html>
 """)
-    else:
-      write('</body>\n</html>')
-      raise
+    write('</body>\n</html>')
+    raise
