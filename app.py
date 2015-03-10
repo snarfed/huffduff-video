@@ -86,6 +86,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
     ydl = youtube_dl.YoutubeDL({
       'outtmpl': '/tmp/%(webpage_url)s.%(ext)s',
       'restrictfilenames': True,  # don't allow & or spaces in file names
+      'updatetime': False,  # don't set output file mtime to video mtime
       'logger': logging,
       'logtostderr': True,
       'format': 'bestaudio/best',
@@ -126,6 +127,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
       yield ('Uploading %s...<br />' % s3_key).encode('utf-8')
       key.set_contents_from_filename(filename)
       key.make_public()
+      os.remove(filename)
 
     # open 'Huffduff it' page
     description = info.get('description') or ''
