@@ -83,8 +83,10 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
       write(msg + '<br />\n')
 
     # fetch video info (resolves URL) to see if we've already downloaded it
-    ydl = youtube_dl.YoutubeDL({
-      'outtmpl': '/tmp/%(webpage_url)s.%(ext)s',
+    options = {
+      # ext4 max filename length is 255 bytes. use format precision to truncate
+      # url part of filename if necessary.
+      'outtmpl': '/tmp/%(webpage_url).240s',
       'restrictfilenames': True,  # don't allow & or spaces in file names
       'updatetime': False,  # don't set output file mtime to video mtime
       'logger': logging,
@@ -97,21 +99,24 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
         'preferredquality': '192',
       }],
       'progress_hooks': [progress_hook],
-    })
+    }
+    ydl = youtube_dl.YoutubeDL(options)
     with handle_errors(write):
       info = ydl.extract_info(url, download=False)
 
     # prepare_filename() returns the video filename, not the postprocessed one,
     # so change the extension manually. the resulting filename will look like:
     #   '/tmp/https_-_www.youtube.com_watchv=6dyWlM4ej3Q.mp3'
-    filename = os.path.splitext(ydl.prepare_filename(info))[0] + '.mp3'
+    filename_prefix = ydl.prepare_filename(info)
+    options['outtmpl'] = filename_prefix + '.%(ext)s'
+    filename = filename_prefix + '.mp3'
 
     s3 = boto.connect_s3(aws_access_key_id=AWS_KEY_ID,
                          aws_secret_access_key=AWS_SECRET_KEY)
     bucket = s3.get_bucket(S3_BUCKET)
     # strip the filename's path, scheme, and leading www., mobile, or m.
     # the resulting S3 key will look like 'youtube.com_watchv=6dyWlM4ej3Q.mp3'
-    s3_key = re.sub('^https?_-_((www|m|mobile).)?', '', os.path.basename(filename))
+    s3_key = re.sub('^https?_-_((www|m|mobile|player).)?', '', os.path.basename(filename))
     key = bucket.get_key(s3_key, validate=False)
 
     if key.exists():
@@ -120,7 +125,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
       # download video and extract mp3
       yield ('Downloading to %s ...<br />' % filename).encode('utf-8')
       with handle_errors(write):
-        ydl.download([url])
+        youtube_dl.YoutubeDL(options).download([url])
 
       # upload to S3
       # http://docs.pythonboto.org/en/latest/s3_tut.html
