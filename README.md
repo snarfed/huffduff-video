@@ -23,10 +23,41 @@ it under the [CC0 license](http://creativecommons.org/publicdomain/zero/1.0/).
 * [iOS workflow](http://www.512pixels.net/blog/2014/12/from-youtube-to-huffduffer-with-workflow) that does the same thing as huffduff-video, except all client side: downloads a YouTube video, converts it to MP3, uploads the MP3 to Dropbox, and passes it to Huffduffer.
 
 
-## AWS Setup
+## S3 notes
 
-Currently on EC2 t2.micro instance. Here's how to setup (but hopefully only for
-posterity since I snapshotted an image):
+The [`aws` command line tool](https://aws.amazon.com/cli/) is nice, but the man
+page isn't very useful.
+[Here's the online reference](http://docs.aws.amazon.com/cli/latest/reference/),
+[here's `aws s3`](http://docs.aws.amazon.com/cli/latest/reference/s3/)
+(high level but minimal), and
+[here's `aws s3api`](http://docs.aws.amazon.com/cli/latest/reference/s3api/)
+(much more powerful).
+
+I ran this to add a rule that deletes files after 90d:
+
+
+
+To see the current usage, from http://serverfault.com/a/644795/274369
+
+aws s3api list-objects --bucket BUCKETNAME --output json --query "[sum(Contents[].Size), length(Contents[])]"
+
+As of 3/10/2015, this is adding roughly 2GB/day to S3, which costs $1.80/mo
+[at $.03/GB/mo](https://aws.amazon.com/s3/pricing/#Storage_Pricing). I could
+consider using
+[RRS (Reduced Redundancy Storage)](https://aws.amazon.com/s3/faqs/#Reduced_Redundancy_Storage_%28RRS%29),
+which would cost $1.44/mo
+[at $.024/GB/mo](https://aws.amazon.com/s3/pricing/#Storage_Pricing), but that's
+not a big difference.
+
+
+## EC2 notes
+
+Currently on EC2 t2.micro instance. I added a
+[CloudWatch alarm](https://console.aws.amazon.com/cloudwatch/) for all system
+checks, but nothing beyond that.
+
+Here's how to set up the EC2 instance (hopefully only for posterity since I
+snapshotted an image):
 
 ```shell
 sudo yum install git httpd-devel mod_wsgi python-devel python26-pip tcsh telnet
