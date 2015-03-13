@@ -68,14 +68,43 @@ which costs [$.024/GB/month](https://aws.amazon.com/s3/pricing/#Storage_Pricing)
 ie $4.32/month, but that's not a big difference.
 
 
+## CloudWatch notes
+
+I set up [CloudWatch](https://console.aws.amazon.com/cloudwatch/) to monitor and
+alarm on EC2 instance system checks, billing thresholds, HTTP logs, and
+application level exceptions.
+
+For the
+last two, I had to:
+* [add an IAM policy](https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/QuickStartEC2Instance.html#d0e9135)
+* [install the logs agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/QuickStartEC2Instance.html#d0e9218) with `sudo yum install awslogs`
+* add my IAM credentials to `/etc/awslogs/awscli.conf`
+* add these lines to `/etc/awslogs/awslogs.conf`:
+```ini
+[/var/log/httpd/access_log]
+file = /var/log/httpd/access_log*
+log_group_name = /var/log/httpd/access_log
+log_stream_name = {instance_id}
+datetime_format = %d/%b/%Y:%H:%M:%S %z
+
+[/var/log/httpd/error_log]
+file = /var/log/httpd/error_log*
+log_group_name = /var/log/httpd/error_log
+log_stream_name = {instance_id}
+datetime_format = %b %d %H:%M:%S %Y
+```
+* run these commands to start the agent and restart it on boot:
+```shell
+sudo service awslogs start
+sudo service awslogs status
+sudo chkconfig awslogs on
+```
+
+
 ## EC2 notes
 
-Currently on EC2 t2.micro instance. I added a
-[CloudWatch alarm](https://console.aws.amazon.com/cloudwatch/) for all system
-checks, but nothing beyond that.
-
-Here's how to set up the EC2 instance (hopefully only for posterity since I
-snapshotted an image):
+Currently on EC2 t2.micro instance. Here's how to set it up (hopefully only for
+posterity since I snapshotted an image):
 
 ```shell
 sudo yum install git httpd-devel mod_wsgi python-devel python26-pip tcsh telnet
