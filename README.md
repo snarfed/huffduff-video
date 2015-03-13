@@ -28,26 +28,44 @@ it under the [CC0 license](http://creativecommons.org/publicdomain/zero/1.0/).
 The [`aws` command line tool](https://aws.amazon.com/cli/) is nice, but the man
 page isn't very useful.
 [Here's the online reference](http://docs.aws.amazon.com/cli/latest/reference/),
-[here's `aws s3`](http://docs.aws.amazon.com/cli/latest/reference/s3/)
+[here's `aws s3`](http://docs.aws.amazon.com/cli/latest/reference/s3/index.html)
 (high level but minimal), and
-[here's `aws s3api`](http://docs.aws.amazon.com/cli/latest/reference/s3api/)
+[here's `aws s3api`](http://docs.aws.amazon.com/cli/latest/reference/s3api/index.html)
 (much more powerful).
 
-I ran this to add a rule that deletes files after 90d:
+Run this see the current usage (from http://serverfault.com/a/644795/274369):
+
+```shell
+aws s3api list-objects --bucket huffduff-video \
+  --query "[sum(Contents[].Size), length(Contents[])]"
+```
+
+Our S3 bucket lifecycle is in
+[`s3_lifecycle.json`](/snarfed/huffduff-video/blob/master/s3_lifecycle.json).
+I ran these commands to set a lifecycle that deletes files after 90d.
+([Config docs](http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTlifecycle.html),
+[`put-bucket-lifecycle` docs](http://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-lifecycle.html).)
+
+```shell
+# show an example lifecycle template
+aws s3api put-bucket-lifecycle --generate-cli-skeleton
+
+# set the lifecycle
+aws s3api put-bucket-lifecycle --bucket huffduff-video \
+  --lifecycle-configuration "`json_pp -json_opt loose <s3_lifecycle.json`"
+
+# check that it's there
+aws s3api get-bucket-lifecycle --bucket huffduff-video
+```
 
 
-
-To see the current usage, from http://serverfault.com/a/644795/274369
-
-aws s3api list-objects --bucket BUCKETNAME --output json --query "[sum(Contents[].Size), length(Contents[])]"
-
-As of 3/10/2015, this is adding roughly 2GB/day to S3, which costs $1.80/mo
-[at $.03/GB/mo](https://aws.amazon.com/s3/pricing/#Storage_Pricing). I could
-consider using
+As of 3/10/2015, users are putting roughly 2GB/day into S3, ie 180GB steady
+state for the lifecycle period of 90d.
+[At $.03/GB/month](https://aws.amazon.com/s3/pricing/#Storage_Pricing), that
+costs $5.40/month. I could use
 [RRS (Reduced Redundancy Storage)](https://aws.amazon.com/s3/faqs/#Reduced_Redundancy_Storage_%28RRS%29),
-which would cost $1.44/mo
-[at $.024/GB/mo](https://aws.amazon.com/s3/pricing/#Storage_Pricing), but that's
-not a big difference.
+which costs [$.024/GB/month](https://aws.amazon.com/s3/pricing/#Storage_Pricing)
+ie $4.32/month, but that's not a big difference.
 
 
 ## EC2 notes
