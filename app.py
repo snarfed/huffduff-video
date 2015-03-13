@@ -134,11 +134,23 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
       key.make_public()
       os.remove(filename)
 
-    # open 'Huffduff it' page
+    # generate description
     description = info.get('description') or ''
-    if len(description) > 1500:
-      description = description[:1500] + '...'
+    footer = """\
+Original video: %s
+Downloaded by http://huffduff-video.snarfed.org/""" % url
+    if description:
+      footer = """
 
+===
+""" + footer
+
+    max_len = 1500 - len(footer)
+    if len(description) > max_len:
+      description = description[:max_len] + '...'
+    description += footer
+
+    # open 'Huffduff it' page
     yield """\
 <script type="text/javascript">
 window.location = "https://huffduffer.com/add?popup=true&%s";
