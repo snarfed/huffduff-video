@@ -23,7 +23,7 @@ it under the [CC0 license](http://creativecommons.org/publicdomain/zero/1.0/).
 * [iOS workflow](http://www.512pixels.net/blog/2014/12/from-youtube-to-huffduffer-with-workflow) that does the same thing as huffduff-video, except all client side: downloads a YouTube video, converts it to MP3, uploads the MP3 to Dropbox, and passes it to Huffduffer.
 
 
-## S3 notes
+## Storage
 
 The [`aws` command line tool](https://aws.amazon.com/cli/) is nice, but the man
 page isn't very useful.
@@ -43,8 +43,8 @@ aws s3api list-objects --bucket huffduff-video \
 Our S3 bucket lifecycle is in
 [`s3_lifecycle.json`](/snarfed/huffduff-video/blob/master/s3_lifecycle.json).
 I ran these commands to set a lifecycle that deletes files after 90d.
-([Config docs](http://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTlifecycle.html),
-[`put-bucket-lifecycle` docs](http://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-lifecycle.html).)
+([Config docs](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTlifecycle.html),
+[`put-bucket-lifecycle` docs](https://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-lifecycle.html).)
 
 ```shell
 # show an example lifecycle template
@@ -68,17 +68,50 @@ which costs [$.024/GB/month](https://aws.amazon.com/s3/pricing/#Storage_Pricing)
 ie $4.32/month, but that's not a big difference.
 
 
-## CloudWatch notes
+## Monitoring
 
 I set up [CloudWatch](https://console.aws.amazon.com/cloudwatch/) to monitor and
 alarm on EC2 instance system checks, billing thresholds, HTTP logs, and
-application level exceptions.
+application level exceptions. When alarms fire, it emails and SMSes me.
 
-For the
-last two, I had to:
+The
+[monitoring alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-west-2)
+are in us-west-2 (Oregon), but
+the [billing alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1)
+have to be in us-east-1 (Virginia). Each region has its own SNS topic for
+notifications:
+[us-east-1](https://console.aws.amazon.com/sns/v2/home?region=us-east-1#/topics/arn:aws:sns:us-east-1:996569606388:NotifyMe)
+[us-west-2](https://console.aws.amazon.com/sns/v2/home?region=us-west-2#/topics/arn:aws:sns:us-west-2:996569606388:huffduff-video)
+
+
+### System metrics
+
+To get system-level custom metrics for memory, swap, and disk space, I set up
+[Amazon's custom monitoring scripts](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/mon-scripts-perl.html).
+
+```shell
+sudo yum install perl-DateTime perl-Sys-Syslog perl-LWP-Protocol-https
+wget http://aws-cloudwatch.s3.amazonaws.com/downloads/CloudWatchMonitoringScripts-1.2.1.zip
+unzip CloudWatchMonitoringScripts-1.2.1.zip
+rm CloudWatchMonitoringScripts-1.2.1.zip
+cd aws-scripts-mon
+
+cp awscreds.template awscreds.conf
+# fill in awscreds.conf
+./mon-put-instance-data.pl --aws-credential-file ~/aws-scripts-mon/awscreds.conf --mem-util --swap-util --disk-space-util --disk-path=/ --verify
+
+crontab -e
+# add this line:
+# * * * * *	./mon-put-instance-data.pl --aws-credential-file ~/aws-scripts-mon/awscreds.conf --mem-util --swap-util --disk-space-util --disk-path=/ --from-cron
+```
+
+
+### Log collection
+
+To set up HTTP and application level monitoring, I had to:
 * [add an IAM policy](https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/QuickStartEC2Instance.html#d0e9135)
 * [install the logs agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/QuickStartEC2Instance.html#d0e9218) with `sudo yum install awslogs`
-* add my IAM credentials to `/etc/awslogs/awscli.conf`
+* add my IAM credentials to `/etc/awslogs/awscli.conf` and set region to us-west-2
 * add these lines to `/etc/awslogs/awslogs.conf`:
 ```ini
 [/var/log/httpd/access_log]
@@ -93,15 +126,40 @@ log_group_name = /var/log/httpd/error_log
 log_stream_name = {instance_id}
 datetime_format = %b %d %H:%M:%S %Y
 ```
-* run these commands to start the agent and restart it on boot:
+* start the agent and restart it on boot:
 ```shell
 sudo service awslogs start
 sudo service awslogs status
 sudo chkconfig awslogs on
 ```
+* wait a while, then check that the logs are flowing:
+```shell
+aws --region us-west-2 logs describe-log-groups
+aws --region us-west-2 logs describe-log-streams --log-group-name /var/log/httpd/access_log
+aws --region us-west-2 logs describe-log-streams --log-group-name /var/log/httpd/error_log
+```
+* define a few
+[metric filters](https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html)
+so we can graph and query HTTP status codes, error messages, etc:
+```shell
+aws logs put-metric-filter --region us-west-2 \
+  --log-group-name /var/log/httpd/access_log \
+  --filter-name HTTPRequests \
+  --filter-pattern '[ip, id, user, timestamp, request, status, bytes]' \
+  --metric-transformations metricName=count,metricNamespace=huffduff-video,metricValue=1
+
+aws logs put-metric-filter --region us-west-2 \
+  --log-group-name /var/log/httpd/error_log \
+  --filter-name PythonErrors \
+  --filter-pattern '[timestamp, error_label, prefix = "ERROR:root:ERROR:", ...]' \
+  --metric-transformations metricName=errors,metricNamespace=huffduff-video,metricValue=1
+
+aws --region us-west-2 logs describe-metric-filters --log-group-name /var/log/httpd/access_log
+aws --region us-west-2 logs describe-metric-filters --log-group-name /var/log/httpd/error_log
+```
 
 
-## EC2 notes
+## System setup
 
 Currently on EC2 t2.micro instance. Here's how to set it up (hopefully only for
 posterity since I snapshotted an image):
