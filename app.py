@@ -175,7 +175,6 @@ def handle_errors(write):
   try:
     yield
   except Exception, e:
-    logging.error('youtube-dl error: %s', e)
     write('<p>%s</p>\n' % e)
     if isinstance(e, (youtube_dl.DownloadError, youtube_dl.utils.ExtractorError)):
       write("""\
