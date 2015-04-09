@@ -165,7 +165,8 @@ Currently on EC2 t2.micro instance. Here's how to set it up (hopefully only for
 posterity since I snapshotted an image):
 
 ```shell
-sudo yum install git httpd-devel mod_wsgi python-devel python26-pip tcsh telnet
+sudo yum install git httpd-devel mod_wsgi python-devel python27-pip tcsh telnet
+sudo update-alternatives --set python /usr/bin/python2.7
 sudo yum groupinstall 'Web Server' 'PHP Support'
 sudo pip install boto webob youtube-dl
 
