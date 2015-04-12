@@ -125,6 +125,11 @@ file = /var/log/httpd/error_log*
 log_group_name = /var/log/httpd/error_log
 log_stream_name = {instance_id}
 datetime_format = %b %d %H:%M:%S %Y
+
+# WSGI writes Python exception stack traces to this log file across multiple
+# lines, and I'd love to collect them multi_line_start_pattern or something
+# similar, but each line is prefixed with the same timestamp + severity + etc
+# prefix as other lines, so I can't.
 ```
 * start the agent and restart it on boot:
 ```shell
@@ -159,6 +164,7 @@ aws --region us-west-2 logs describe-metric-filters --log-group-name /var/log/ht
 ```
 
 
+
 ## System setup
 
 Currently on EC2 t2.micro instance. Here's how to set it up (hopefully only for
@@ -187,6 +193,15 @@ sudo make install
 # Options FollowSymLinks
 # WSGIScriptAlias /get /var/www/cgi-bin/app.py
 # LogLevel info
+#
+# # tune number of prefork server processes
+# # see http://fuscata.com/kb/set-maxclients-apache-prefork etc.
+# StartServers       8
+# MinSpareServers    2
+# MaxSpareServers    4
+# ServerLimit        12
+# MaxClients         12
+# MaxRequestsPerChild  4000
 
 # start apache
 sudo service httpd start
