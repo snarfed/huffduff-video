@@ -164,6 +164,45 @@ aws --region us-west-2 logs describe-metric-filters --log-group-name /var/log/ht
 ```
 
 
+## Understanding bandwidth usage
+
+As of 2015-04-29, huffduff-video is serving ~XXXGB/mo (via S3), which costs
+~$25/mo in bandwidth alone. I'm ok with that, but I think it could be lower.
+
+As always, measure first, then optimize. To learn a bit more about who's
+downloading these files, I turned on
+[S3 access logging](http://docs.aws.amazon.com/AmazonS3/latest/dev/ServerLogs.html),
+waited 24h, then ran these commands to collect and aggregate the logs:
+
+```shell
+aws --profile personal s3 sync s3://huffduff-video/logs .
+grep REST.GET.OBJECT 2015-* | grep ' 200 ' | cut -d' ' -f8,20- \
+  | sort | uniq -c | sort -n -r > user_agents
+```
+
+This gave me some useful baseline numbers. Over a 24h period, there were 482
+downloads, 318 of which came from bots. (That's 2/3!) Out of the six top user
+agents by downloads, five were bots. The sixth was the
+[Overcast](http://overcast.fm/) podcast app.
+
+* [Flipboard](https://flipboard.com/)Proxy (142 downloads)
+* [Googlebot](http://www.google.com/bot.html) (67)
+* Twitterbot (39)
+* [Overcast](http://overcast.fm/) (47)
+* [Yahoo! Slurp](http://help.yahoo.com/help/us/ysearch/slurp) (36)
+* Googlebot-Video (34)
+
+(Side note: Googlebot-Video is polite and includes `Etag` or `If-Modified-Since`
+when it refetches files. It sent 68 requests, but exactly half of those resulted
+in an empty `304` response. Thanks Googlebot-Video!)
+
+I've switch huffduff-video to use S3 URLs on the
+`huffduff-video.s3.amazonaws.com`
+[virtual host](http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html)
+and added a
+[`robots.txt` file](https://github.com/snarfed/huffduff-video/tree/master/s3_robots.txt)
+that blocks all bots. Fingers crossed!
+
 
 ## System setup
 

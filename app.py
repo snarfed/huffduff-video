@@ -24,7 +24,7 @@ def read(filename):
 AWS_KEY_ID = read('aws_key_id')
 AWS_SECRET_KEY = read('aws_secret_key')
 S3_BUCKET = 'huffduff-video'
-S3_BASE = 'https://s3-us-west-2.amazonaws.com/%s/' % S3_BUCKET
+S3_BASE = 'https://%s.s3-us-west-2.amazonaws.com/' % S3_BUCKET
 
 
 def application(environ, start_response):
