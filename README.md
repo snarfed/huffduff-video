@@ -166,8 +166,8 @@ aws --region us-west-2 logs describe-metric-filters --log-group-name /var/log/ht
 
 ## Understanding bandwidth usage
 
-As of 2015-04-29, huffduff-video is serving ~XXXGB/mo (via S3), which costs
-~$25/mo in bandwidth alone. I'm ok with that, but I think it could be lower.
+As of 2015-04-29, huffduff-video is serving ~257 GB/mo (via S3), which costs
+~$24/mo in bandwidth alone. I'm ok with that, but I think it could be lower.
 
 As always, measure first, then optimize. To learn a bit more about who's
 downloading these files, I turned on
@@ -182,26 +182,47 @@ grep REST.GET.OBJECT 2015-* | grep ' 200 ' | cut -d' ' -f8,20- \
 
 This gave me some useful baseline numbers. Over a 24h period, there were 482
 downloads, 318 of which came from bots. (That's 2/3!) Out of the six top user
-agents by downloads, five were bots. The sixth was the
+agents by downloads, five were bots. The one exception was the
 [Overcast](http://overcast.fm/) podcast app.
 
 * [Flipboard](https://flipboard.com/)Proxy (142 downloads)
 * [Googlebot](http://www.google.com/bot.html) (67)
-* Twitterbot (39)
+* [Twitterbot](https://dev.twitter.com/cards/getting-started#crawling) (39)
 * [Overcast](http://overcast.fm/) (47)
 * [Yahoo! Slurp](http://help.yahoo.com/help/us/ysearch/slurp) (36)
-* Googlebot-Video (34)
+* [Googlebot-Video](https://support.google.com/webmasters/answer/1061943) (34)
 
 (Side note: Googlebot-Video is polite and includes `Etag` or `If-Modified-Since`
 when it refetches files. It sent 68 requests, but exactly half of those resulted
 in an empty `304` response. Thanks Googlebot-Video!)
 
-I've switch huffduff-video to use S3 URLs on the
+I switched huffduff-video to use S3 URLs on the
 `huffduff-video.s3.amazonaws.com`
-[virtual host](http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html)
-and added a
+[virtual host](http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html),
+added a
 [`robots.txt` file](https://github.com/snarfed/huffduff-video/tree/master/s3_robots.txt)
-that blocks all bots. Fingers crossed!
+that blocks all bots, waited 24h, and then measured again. The vast majority of
+huffduff-video links on [Huffduffer](http://huffduffer.com/) are still on the
+`s3.amazonaws.com` domain, which doesn't serve my `robots.txt`, so I didn't
+expect a big difference...but I was wrong. Twitterbot had roughly the same
+number, but the rest were way down:
+
+* [Overcast](http://overcast.fm/) (76)
+* [Twitterbot](https://dev.twitter.com/cards/getting-started#crawling) (36)
+* [Flipboard](https://flipboard.com/)Proxy (33)
+* iTunes (OS X) (21)
+* [Yahoo! Slurp](http://help.yahoo.com/help/us/ysearch/slurp) (20)
+* libwww-perl (18)
+* [Googlebot](http://www.google.com/bot.html) (14)
+
+([Googlebot-Video](https://support.google.com/webmasters/answer/1061943) was way
+farther down the chart with just 4 downloads.)
+
+This may have been due to the fact that my first measurement was Wed-Thurs, and
+the second was Fri-Sat, which are slower social media and link sharing days.
+Still, I'm hoping some of it was due to `robots.txt`. Fingers crossed the bots
+will eventually go away altogether!
+
 
 
 ## System setup
