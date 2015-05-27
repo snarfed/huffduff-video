@@ -67,7 +67,7 @@ window.setInterval(function() { window.scrollTo(0, document.body.scrollHeight); 
 Fetching %s ...<br />""" % (url, url)).encode('utf-8')
 
     # function to print out status while downloading
-    def progress_hook(progress):
+    def download_progress_hook(progress):
       status = progress.get('status')
       if status == 'error':
         # we always get an 'error' progress when the video finishes downloading.
@@ -98,7 +98,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
         'preferredcodec': 'mp3',
         'preferredquality': '192',
       }],
-      'progress_hooks': [progress_hook],
+      'progress_hooks': [download_progress_hook],
     }
     ydl = youtube_dl.YoutubeDL(options)
     with handle_errors(write):
@@ -120,17 +120,21 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
     key = bucket.get_key(s3_key, validate=False)
 
     if key.exists():
-      yield 'Already downloaded! <br />'
+      yield 'Already downloaded! <br />\n'
     else:
       # download video and extract mp3
-      yield ('Downloading to %s ...<br />' % filename).encode('utf-8')
+      yield 'Downloading and extracting audio...<br />\n'
       with handle_errors(write):
         youtube_dl.YoutubeDL(options).download([url])
 
       # upload to S3
       # http://docs.pythonboto.org/en/latest/s3_tut.html
-      yield ('Uploading %s...<br />' % s3_key).encode('utf-8')
-      key.set_contents_from_filename(filename)
+      yield 'Uploading to S3...<br />\n'
+
+      def upload_callback(sent, total):
+        write('%s%%...<br />\n' % (sent * 100 / total))
+
+      key.set_contents_from_filename(filename, cb=upload_callback)
       key.make_public()
       os.remove(filename)
 
@@ -151,7 +155,7 @@ Downloaded by http://huffduff-video.snarfed.org/""" % url
     description += footer
 
     # open 'Huffduff it' page
-    yield """\
+    yield """Opening Huffduffer dialog...
 <script type="text/javascript">
 window.location = "https://huffduffer.com/add?popup=true&%s";
 </script>
