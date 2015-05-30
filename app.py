@@ -69,7 +69,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
     # function to print out status while downloading
     def download_progress_hook(progress):
       status = progress.get('status')
-      if status == 'error':
+      if status in ('finished', 'error'):
         # we always get an 'error' progress when the video finishes downloading.
         # not sure why. ignore it.
         return
