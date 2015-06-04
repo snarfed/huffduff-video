@@ -223,6 +223,12 @@ the second was Fri-Sat, which are slower social media and link sharing days.
 Still, I'm hoping some of it was due to `robots.txt`. Fingers crossed the bots
 will eventually go away altogether!
 
+To update the `robots.txt` file:
+
+```shell
+aws --profile personal s3 cp s3_robots.txt s3://huffduff-video/robots.txt
+```
+
 
 
 ## System setup
