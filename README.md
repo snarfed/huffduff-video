@@ -297,4 +297,5 @@ sudo ln -s ~/src/huffduff-video/static/index.html
 # clean up /tmp every hour
 touch ~/crontab
 echo "* * * * 0\tfind /tmp/ -user apache -not -newermt yesterday | xargs rm" >> ~/crontab
+crontab crontab
 ```
