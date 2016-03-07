@@ -185,7 +185,7 @@ downloads, 318 of which came from bots. (That's 2/3!) Out of the six top user
 agents by downloads, five were bots. The one exception was the
 [Overcast](http://overcast.fm/) podcast app.
 
-* [Flipboard](https://flipboard.com/)Proxy (142 downloads)
+* [Flipboard](https://flipboard.com/) Proxy (142 downloads)
 * [Googlebot](http://www.google.com/bot.html) (67)
 * [Twitterbot](https://dev.twitter.com/cards/getting-started#crawling) (39)
 * [Overcast](http://overcast.fm/) (47)
