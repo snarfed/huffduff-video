@@ -233,8 +233,14 @@ aws --profile personal s3 cp s3_robots.txt s3://huffduff-video/robots.txt
 
 ## System setup
 
-Currently on EC2 t2.micro instance. Here's how to set it up (hopefully only for
-posterity since I snapshotted an image):
+Currently on EC2 t2.nano instance.
+
+I migrated it from a t2.micro on 2016-03-24 by making an snapshot of the
+t2.micro's EBS volume, making an AMI from the snapshot, then launching a new
+t2.nano instance using that AMI.
+[Details.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html#creating-launching-ami-from-snapshot)
+
+Here's how I originally set it up:
 
 ```shell
 sudo yum install git httpd-devel mod_wsgi python-devel python27-pip tcsh telnet
