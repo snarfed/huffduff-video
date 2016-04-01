@@ -83,8 +83,8 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
           p('_percent_str'), p('_total_bytes_str') or p('_total_bytes_estimate_str'),
           p('_speed_str'), p('_eta_str'))
       else:
-        msg = status
-      write(msg + '<br />\n')
+        msg = status+ '<br />\n'
+      write(msg)
 
     # fetch video info (resolves URL) to see if we've already downloaded it
     options = {
