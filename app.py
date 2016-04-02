@@ -26,6 +26,10 @@ AWS_SECRET_KEY = read('aws_secret_key')
 S3_BUCKET = 'huffduff-video'
 S3_BASE = 'https://%s.s3-us-west-2.amazonaws.com/' % S3_BUCKET
 
+# ffmpeg on Ryan's laptop is installed in /usr/local/bin, so add it to PATH.
+if '/usr/local/bin' not in os.environ['PATH']:
+  os.environ['PATH'] += ':/usr/local/bin'
+
 
 def application(environ, start_response):
   """Hand-rolled WSGI application so I can stream output.
@@ -62,9 +66,6 @@ def application(environ, start_response):
 <style> #progress span {display:none;}
         #progress span:last-of-type {display:inline;}
 </style>
-<script type="text/javascript">
-window.setInterval(function() { window.scrollTo(0, document.body.scrollHeight); }, 500);
-</script>
 <body>
 <h1>huffduff-video</h1>
 <div id="progress">
@@ -73,17 +74,22 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
     # function to print out status while downloading
     def download_progress_hook(progress):
       status = progress.get('status')
-      if status in ('finished', 'error'):
+      if status == 'finished':
+        msg = '<br />Extracting audio (this can take a while)...\n'
+      elif status == 'error':
         # we always get an 'error' progress when the video finishes downloading.
         # not sure why. ignore it.
         return
       elif status == 'downloading':
         p = lambda field: progress.get(field) or ''
-        msg = '<span><progress max="100" value="%s"></progress> of %s at %s in %s...</span>' % (
-          p('_percent_str'), p('_total_bytes_str') or p('_total_bytes_estimate_str'),
-          p('_speed_str'), p('_eta_str'))
+        percent = float(p('_percent_str').strip('%') or '0')
+        msg = ('<span><progress max="100" value="%s"></progress><br /> '
+               '%s of %s at %s in %s...</span>\n' % (
+                 percent, p('_downloaded_bytes_str'),
+                 p('_total_bytes_str') or p('_total_bytes_estimate_str'),
+                 p('_speed_str'), p('_eta_str')))
       else:
-        msg = status+ '<br />\n'
+        msg = status + '<br />\n'
       write(msg)
 
     # fetch video info (resolves URL) to see if we've already downloaded it
@@ -127,7 +133,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
       yield 'Already downloaded! <br />\n'
     else:
       # download video and extract mp3
-      yield 'Downloading and extracting audio...<br />\n'
+      yield 'Downloading...<br />\n'
       with handle_errors(write):
         youtube_dl.YoutubeDL(options).download([url])
 
@@ -136,7 +142,9 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
       yield 'Uploading to S3...<br />\n'
 
       def upload_callback(sent, total):
-        write('<span><progress max="100" value="%s"></progress> </span>\n' % (sent * 100 / total))
+        write('<span><progress max="100" value="%s"></progress><br /> '
+              '%.2fMB of %.2fMB</span>\n' % (
+                (sent * 100 / total), float(sent) / 1000000, float(total) / 1000000))
 
       key.set_contents_from_filename(filename, cb=upload_callback)
       key.make_public()
@@ -159,7 +167,7 @@ Downloaded by http://huffduff-video.snarfed.org/""" % url
     description += footer
 
     # open 'Huffduff it' page
-    yield """Opening Huffduffer dialog...
+    yield """\n<br />Opening Huffduffer dialog...
 <script type="text/javascript">
 window.location = "https://huffduffer.com/add?popup=true&%s";
 </script>
