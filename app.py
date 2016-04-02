@@ -59,11 +59,15 @@ def application(environ, start_response):
 <!DOCTYPE html>
 <html>
 <head><title>huffduff-video: %s</title></head>
+<style> #progress span {display:none;}
+        #progress span:last-of-type {display:inline;}
+</style>
 <script type="text/javascript">
 window.setInterval(function() { window.scrollTo(0, document.body.scrollHeight); }, 500);
 </script>
 <body>
 <h1>huffduff-video</h1>
+<div id="progress">
 Fetching %s ...<br />""" % (url, url)).encode('utf-8')
 
     # function to print out status while downloading
@@ -75,12 +79,12 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
         return
       elif status == 'downloading':
         p = lambda field: progress.get(field) or ''
-        msg = '%s of %s at %s in %s...' % (
+        msg = '<span><progress max="100" value="%s"></progress> of %s at %s in %s...</span>' % (
           p('_percent_str'), p('_total_bytes_str') or p('_total_bytes_estimate_str'),
           p('_speed_str'), p('_eta_str'))
       else:
-        msg = status
-      write(msg + '<br />\n')
+        msg = status+ '<br />\n'
+      write(msg)
 
     # fetch video info (resolves URL) to see if we've already downloaded it
     options = {
@@ -132,7 +136,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
       yield 'Uploading to S3...<br />\n'
 
       def upload_callback(sent, total):
-        write('%s%%...<br />\n' % (sent * 100 / total))
+        write('<span><progress max="100" value="%s"></progress> </span>\n' % (sent * 100 / total))
 
       key.set_contents_from_filename(filename, cb=upload_callback)
       key.make_public()
