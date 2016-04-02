@@ -67,7 +67,7 @@ def application(environ, start_response):
         #progress span:last-of-type {display:inline;}
 </style>
 <body>
-<h1>huffduff-video</h1>
+<h1><a href="http://huffduff-video.snarfed.org/" target="_blank">huffduff-video</a></h1>
 <div id="progress">
 Fetching %s ...<br />""" % (url, url)).encode('utf-8')
 
