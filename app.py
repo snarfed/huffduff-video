@@ -62,7 +62,11 @@ def application(environ, start_response):
     yield ("""\
 <!DOCTYPE html>
 <html>
-<head><title>huffduff-video: %s</title></head>
+<head>
+<title>huffduff-video: %s</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
 <style> #progress span {display:none;}
         #progress span:last-of-type {display:inline;}
 </style>
