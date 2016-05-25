@@ -42,7 +42,7 @@ aws s3api list-objects --bucket huffduff-video \
 
 Our S3 bucket lifecycle is in
 [`s3_lifecycle.json`](/snarfed/huffduff-video/blob/master/s3_lifecycle.json).
-I ran these commands to set a lifecycle that deletes files after 90d.
+I ran these commands to set a lifecycle that deletes files after 30d.
 ([Config docs](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTlifecycle.html),
 [`put-bucket-lifecycle` docs](https://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-lifecycle.html).)
 
@@ -233,11 +233,14 @@ aws --profile personal s3 cp s3_robots.txt s3://huffduff-video/robots.txt
 
 ## System setup
 
-Currently on EC2 t2.nano instance.
+Currently on EC2 t2.micro instance.
 
-I migrated it from a t2.micro on 2016-03-24 by making an snapshot of the
-t2.micro's EBS volume, making an AMI from the snapshot, then launching a new
-t2.nano instance using that AMI.
+I started it originally on a t2.micro. I migrated it to a t2.nano on 2016-03-24,
+but usage outgrew the nano's CPU quota, so I migrated back to a t2.micro on
+2016-05-25.
+
+I did both migrations by making an snapshot of the t2.micro's EBS volume, making
+an AMI from the snapshot, then launching a new t2.nano instance using that AMI.
 [Details.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html#creating-launching-ami-from-snapshot)
 
 Here's how I originally set it up:

@@ -1,7 +1,7 @@
 {
   "Rules": [{
-    "ID": "expire after 90d",
-    "Expiration": {"Days": 90},
+    "ID": "expire after 30d",
+    "Expiration": {"Days": 31},
     "Prefix": "",
     "Status": "Enabled"
   }]
