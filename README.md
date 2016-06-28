@@ -229,6 +229,8 @@ To update the `robots.txt` file:
 aws --profile personal s3 cp s3_robots.txt s3://huffduff-video/robots.txt
 ```
 
+I put this in a cron job to run every 30d. I had to run `aws configure` first
+and give it the key id and secret.
 
 
 ## System setup
