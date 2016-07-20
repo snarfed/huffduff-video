@@ -98,9 +98,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
 
     # fetch video info (resolves URL) to see if we've already downloaded it
     options = {
-      # ext4 max filename length is 255 bytes. use format precision to truncate
-      # url part of filename if necessary.
-      'outtmpl': '/tmp/%(webpage_url).240s',
+      'outtmpl': '/tmp/%(webpage_url)s',
       'restrictfilenames': True,  # don't allow & or spaces in file names
       'updatetime': False,  # don't set output file mtime to video mtime
       'logger': logging,
@@ -121,8 +119,11 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
     # prepare_filename() returns the video filename, not the postprocessed one,
     # so change the extension manually. the resulting filename will look like:
     #   '/tmp/https_-_www.youtube.com_watchv=6dyWlM4ej3Q.mp3'
-    filename_prefix = ydl.prepare_filename(info)
-    options['outtmpl'] = filename_prefix + '.%(ext)s'
+    #
+    # also, ext4 max filename length is 255 bytes, so truncate url part if
+    # necessary.
+    filename_prefix = ydl.prepare_filename(info)[:245]
+    options['outtmpl'] = filename_prefix.replace('%', '%%') + '.%(ext)s'
     filename = filename_prefix + '.mp3'
 
     s3 = boto.connect_s3(aws_access_key_id=AWS_KEY_ID,
