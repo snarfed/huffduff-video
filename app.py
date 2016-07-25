@@ -155,11 +155,15 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
       key.make_public()
       os.remove(filename)
 
+    # get metadata, specifically last_modified
+    key = bucket.get_key(s3_key)
     # generate description
     description = info.get('description') or ''
     footer = """\
 Original video: %s
-Downloaded by http://huffduff-video.snarfed.org/""" % url
+Downloaded by http://huffduff-video.snarfed.org/ on %s
+Available for 30 days after download""" % (url, key.last_modified)
+    # last_modified format is RFC 7231, e.g. 'Fri, 22 Jul 2016 07:11:46 GMT'
     if description:
       footer = """
 
