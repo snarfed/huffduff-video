@@ -6,16 +6,37 @@ Short test video: http://youtu.be/6dyWlM4ej3Q
 __author__ = ['Ryan Barrett <huffduff-video@ryanb.org>']
 
 import contextlib
+import datetime
 import logging
 import os
 import re
+from string import Template
 import urllib
 
 import boto
+import boto.ec2.cloudwatch
 import webob
 import webob.exc
 import youtube_dl
 
+HTML_HEADER = """\
+<!DOCTYPE html>
+<html>
+<head>
+<title>huffduff-video</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<style> #progress span {display:none;}
+        #progress span:last-of-type {display:inline;}
+</style>
+<body>
+<h1><a href="http://huffduff-video.snarfed.org/" target="_blank">huffduff-video</a></h1>
+"""
+HTML_FOOTER = """\
+</body>
+</html>
+"""
 
 def read(filename):
   with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), filename)) as f:
@@ -48,6 +69,25 @@ def application(environ, start_response):
     return webob.exc.HTTPBadRequest('Missing required parameter: url')(
       environ, start_response)
 
+  # check that our CPU credit balance isn't too low
+  try:
+    cloudwatch = boto.ec2.cloudwatch.connect_to_region(
+      'us-west-2', aws_access_key_id=AWS_KEY_ID,
+      aws_secret_access_key=AWS_SECRET_KEY)
+    for metric in cloudwatch.list_metrics():
+      if metric.name == 'CPUCreditBalance':
+        stats = metric.query(datetime.datetime.now() - datetime.timedelta(minutes=10),
+                             datetime.datetime.now(), ['Average'])
+        if stats:
+          credit = stats[-1].get('Average')
+          if credit and credit <= 100:
+            msg = "Sorry, we're too busy right now. Please try again later!"
+            exc = webob.exc.HTTPServiceUnavailable(msg)
+            exc.html_template_obj = Template(HTML_HEADER + msg + HTML_FOOTER)
+            return exc(environ, start_response)
+  except:
+    logging.exception("Couldn't fetch CPU credit balance from CloudWatch!")
+
   write_fn = start_response('200 OK', headers)
   def write(line):
     write_fn(line.encode('utf-8'))
@@ -59,21 +99,8 @@ def application(environ, start_response):
     an exception. Currently the log only gets the exception message. Wrapping
     the call at the bottom in try/except doesn't work since it's a generator. :/
     """
-    yield ("""\
-<!DOCTYPE html>
-<html>
-<head>
-<title>huffduff-video: %s</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="mobile-web-app-capable" content="yes">
-</head>
-<style> #progress span {display:none;}
-        #progress span:last-of-type {display:inline;}
-</style>
-<body>
-<h1><a href="http://huffduff-video.snarfed.org/" target="_blank">huffduff-video</a></h1>
-<div id="progress">
-Fetching %s ...<br />""" % (url, url)).encode('utf-8')
+    yield HTML_HEADER
+    yield ('<div id="progress">\nFetching %s ...<br />' % url).encode('utf-8')
 
     # function to print out status while downloading
     def download_progress_hook(progress):
@@ -98,7 +125,7 @@ Fetching %s ...<br />""" % (url, url)).encode('utf-8')
 
     # fetch video info (resolves URL) to see if we've already downloaded it
     options = {
-      'outtmpl': '/tmp/%(webpage_url)s',
+      'outtmpl': u'/tmp/%(webpage_url)s',
       'restrictfilenames': True,  # don't allow & or spaces in file names
       'updatetime': False,  # don't set output file mtime to video mtime
       'logger': logging,
@@ -180,13 +207,13 @@ Available for 30 days after download""" % (url, key.last_modified)
 <script type="text/javascript">
 window.location = "https://huffduffer.com/add?popup=true&%s";
 </script>
-</body>
-</html>""" % urllib.urlencode([(k, v.encode('utf-8')) for k, v in
+""" % urllib.urlencode([(k, v.encode('utf-8')) for k, v in
       (('bookmark[url]', (S3_BASE + s3_key)),
        ('bookmark[title]', info.get('title') or ''),
        ('bookmark[description]', description),
        ('bookmark[tags]', ','.join(info.get('categories') or [])),
      )])
+    yield HTML_FOOTER
 
     # alternative:
     # http://themindfulbit.com/blog/optimizing-your-podcast-site-for-huffduffer
@@ -207,5 +234,5 @@ Here are the <a href="http://rg3.github.io/youtube-dl/supportedsites.html">
 supported sites</a>. If this site isn't supported, it may also post
 its videos on YouTube. Try there!
 """)
-    write('</body>\n</html>')
+    write(HTML_FOOTER)
     raise
