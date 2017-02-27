@@ -147,9 +147,9 @@ def application(environ, start_response):
     # so change the extension manually. the resulting filename will look like:
     #   '/tmp/https_-_www.youtube.com_watchv=6dyWlM4ej3Q.mp3'
     #
-    # also, ext4 max filename length is 255 bytes, so truncate url part if
-    # necessary.
-    filename_prefix = ydl.prepare_filename(info)[:245]
+    # ext4 max filename length is 255 bytes, and huffduffer also silently
+    # truncates URLs to 255 chars total, so truncate before that if necessary.
+    filename_prefix = ydl.prepare_filename(info)[:245 - S3_BASE]
     options['outtmpl'] = filename_prefix.replace('%', '%%') + '.%(ext)s'
     filename = filename_prefix + '.mp3'
 
