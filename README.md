@@ -36,7 +36,7 @@ page isn't very useful.
 Run this see the current usage (from http://serverfault.com/a/644795/274369):
 
 ```shell
-aws --profile=default s3api list-objects --bucket huffduff-video \
+aws --profile=personal s3api list-objects --bucket huffduff-video \
   --query "[sum(Contents[].Size), length(Contents[])]"
 ```
 
