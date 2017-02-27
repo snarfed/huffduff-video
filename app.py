@@ -149,7 +149,7 @@ def application(environ, start_response):
     #
     # ext4 max filename length is 255 bytes, and huffduffer also silently
     # truncates URLs to 255 chars total, so truncate before that if necessary.
-    filename_prefix = ydl.prepare_filename(info)[:245 - S3_BASE]
+    filename_prefix = ydl.prepare_filename(info)[:245 - len(S3_BASE)]
     options['outtmpl'] = filename_prefix.replace('%', '%%') + '.%(ext)s'
     filename = filename_prefix + '.mp3'
 
