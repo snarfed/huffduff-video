@@ -245,17 +245,20 @@ I did both migrations by making an snapshot of the t2.micro's EBS volume, making
 an AMI from the snapshot, then launching a new t2.nano instance using that AMI.
 [Details.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html#creating-launching-ami-from-snapshot)
 
-Here's how I originally set it up:
+Here's how I set it up:
 
 ```shell
-sudo yum install git httpd-devel mod_wsgi python-devel python27-pip tcsh telnet
+sudo yum remove httpd httpd-tools  # uninstall apache 2.2 before installing 2.4
+sudo yum install git httpd24 httpd24-tools httpd24-devel mod24_wsgi-python27 python27-devel python27-pip tcsh telnet
 sudo update-alternatives --set python /usr/bin/python2.7
 sudo yum groupinstall 'Web Server' 'PHP Support'
 sudo pip install boto webob youtube-dl
 
-# Amazon Linux AMI has mod_wsgi 3.2, but we need 3.4 to prevent this error when
+# Check that mod_wsgi is at least version 3.4! We need 3.4 to prevent this error when
 # running youtube-dl under WSGI:
 # AttributeError: 'mod_wsgi.Log' object has no attribute 'isatty'
+#
+# *If* it's not, build 3.4 from scratch (but check that it's also python 2.7!):
 curl -o mod_wsgi-3.4.tar.gz https://modwsgi.googlecode.com/files/mod_wsgi-3.4.tar.gz
 tar xvzf mod_wsgi-3.4.tar.gz
 cd mod_wsgi-3.4
@@ -266,7 +269,7 @@ sudo make install
 # add these lines to /etc/httpd/conf/httpd.conf
 #
 # # for huffduff-video
-# LoadModule wsgi_module /usr/lib64/httpd/modules/mod_wsgi.so
+# LoadModule wsgi_module /usr/lib64/httpd/modules/mod_wsgi27.so
 # Options FollowSymLinks
 # WSGIScriptAlias /get /var/www/cgi-bin/app.py
 # LogLevel info
