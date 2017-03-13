@@ -10,7 +10,9 @@ import datetime
 import logging
 import os
 import re
+import ssl
 from string import Template
+import sys
 import urllib
 
 import boto
@@ -31,8 +33,9 @@ HTML_HEADER = """\
         #progress span:last-of-type {display:inline;}
 </style>
 <body>
+<!-- %s ; %s -->
 <h1><a href="http://huffduff-video.snarfed.org/" target="_blank">huffduff-video</a></h1>
-"""
+""" % (sys.version, ssl.OPENSSL_VERSION)
 HTML_FOOTER = """\
 </body>
 </html>
