@@ -80,7 +80,7 @@ def application(environ, start_response):
                              datetime.datetime.now(), ['Average'])
         if stats:
           credit = stats[-1].get('Average')
-          if credit and credit <= 10:
+          if credit and credit <= 30:
             msg = "Sorry, we're too busy right now. Please try again later!"
             exc = webob.exc.HTTPServiceUnavailable(msg)
             exc.html_template_obj = Template(HTML_HEADER + msg + HTML_FOOTER)
