@@ -77,7 +77,7 @@ def application(environ, start_response):
     cloudwatch = boto.ec2.cloudwatch.connect_to_region(
       'us-west-2', aws_access_key_id=AWS_KEY_ID,
       aws_secret_access_key=AWS_SECRET_KEY)
-    for metric in cloudwatch.list_metrics():
+    for metric in cloudwatch.list_metrics(metric_name='CPUCreditBalance'):
       if metric.name == 'CPUCreditBalance':
         stats = metric.query(datetime.datetime.now() - datetime.timedelta(minutes=10),
                              datetime.datetime.now(), ['Average'])
