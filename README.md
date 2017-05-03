@@ -307,6 +307,7 @@ cd /var/www/cgi-bin
 sudo ln -s ~/src/huffduff-video/app.py
 cd /var/www/html
 sudo ln -s ~/src/huffduff-video/static/index.html
+sudo ln -s ~/src/huffduff-video/static/robots.txt
 
 # clean up /tmp every hour
 touch ~/crontab
