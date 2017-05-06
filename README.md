@@ -309,8 +309,12 @@ cd /var/www/html
 sudo ln -s ~/src/huffduff-video/static/index.html
 sudo ln -s ~/src/huffduff-video/static/robots.txt
 
-# clean up /tmp every hour
 touch ~/crontab
+# clean up /tmp every hour
 echo "0 * * * *\tfind /tmp/ -user apache -not -newermt yesterday | xargs rm" >> ~/crontab
+# auto upgrade youtube-dl daily
+echo "10 10 * * *	sudo pip install -U youtube-dl; sudo service httpd restart" >> ~/crontab
+# recopy robots.txt to S3 since our bucket expiration policy deletes it monthly
+echo "1 2 3 * *	aws s3 cp --acl=public-read ~/src/huffduff-video/s3_robots.txt s3://huffduff-video/robots.txt"
 crontab crontab
 ```
