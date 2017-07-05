@@ -67,6 +67,8 @@ costs $5.40/month. I could use
 which costs [$.024/GB/month](https://aws.amazon.com/s3/pricing/#Storage_Pricing)
 ie $4.32/month, but that's not a big difference.
 
+There are definitely cheaper alternatives outside AWS. [Backblaze B2](https://www.backblaze.com/b2/), for example, [is < 1/4 S3's price](https://www.backblaze.com/b2/cloud-storage-pricing.html). Worth a look if S3 gets too expensive.
+
 
 ## Monitoring
 
