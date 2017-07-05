@@ -233,6 +233,26 @@ I put this in a cron job to run every 30d. I had to run `aws configure` first
 and give it the key id and secret.
 
 
+## Memory tuning
+
+`t2.micro`s only have 1GB of memory, so sometimes the system runs out. Lines like these show up in `/var/log/httpd/error_log`:
+
+```
+[Mon Jul 03 11:20:09.050893 2017] [mpm_prefork:error] [pid 26214] (12)Cannot allocate memory: AH00159: fork: Unable to fork new process
+[Mon Jul 03 11:20:19.471164 2017] [reqtimeout:info] [pid 26962] [client 220.253.163.157:54651] AH01382: Request header read timeout
+[Mon Jul 03 12:37:27.462868 2017] [mpm_prefork:info] [pid 26214] AH00162: server seems busy, (you may need to increase StartServers, or Min/MaxSpareServers), spawning 32 children, there are 0 idle, and 7 total children
+[Sun Jul 02 16:54:30.038240 2017] [:error] [pid 5039] [client 174.127.212.155:54658] ImportError: /usr/lib64/python2.7/lib-dynload/_functoolsmodule.so: failed to map segment from shared object: Cannot allocate memory
+```
+
+I made a 4GB swap partition on 2017-07-04 with:
+
+```sh
+sudo dd if=/dev/zero of=/var/swapfile bs=1M count=4096
+sudo chmod 600 /var/swapfile
+sudo mkswap /var/swapfile
+sudo swapon /var/swapfile
+```
+
 ## System setup
 
 Currently on EC2 t2.micro instance.
