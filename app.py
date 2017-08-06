@@ -116,7 +116,10 @@ def application(environ, start_response):
         return
       elif status == 'downloading':
         p = lambda field: progress.get(field) or ''
-        percent = float(p('_percent_str').strip('%') or '0')
+        try:
+          percent = float(p('_percent_str').strip('%') or '0')
+        except ValueError:
+          percent = 0
         msg = ('<span><progress max="100" value="%s"></progress><br /> '
                '%s of %s at %s in %s...</span>\n' % (
                  percent, p('_downloaded_bytes_str'),
