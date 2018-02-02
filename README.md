@@ -178,8 +178,10 @@ waited 24h, then ran these commands to collect and aggregate the logs:
 
 ```shell
 aws --profile personal s3 sync s3://huffduff-video/logs .
-grep REST.GET.OBJECT 2015-* | grep ' 200 ' | cut -d' ' -f8,20- \
-  | sort | uniq -c | sort -n -r > user_agents
+grep -R REST.GET.OBJECT . | grep ' 200 ' | grep -vE 'robots.txt|logs/20' \
+  | cut -d' ' -f8,20- | sort | uniq -c | sort -n -r > user_agents
+grep -R REST.GET.OBJECT . | grep ' 200 ' | grep -vE 'robots.txt|logs/20' \
+  | cut -d' ' -f5 | sort | uniq -c | sort -n -r > ips
 ```
 
 This gave me some useful baseline numbers. Over a 24h period, there were 482
@@ -211,7 +213,7 @@ number, but the rest were way down:
 
 * [Overcast](http://overcast.fm/) (76)
 * [Twitterbot](https://dev.twitter.com/cards/getting-started#crawling) (36)
-* [Flipboard](https://flipboard.com/)Proxy (33)
+* [FlipboardProxy](https://flipboard.com/) (33)
 * iTunes (OS X) (21)
 * [Yahoo! Slurp](http://help.yahoo.com/help/us/ysearch/slurp) (20)
 * libwww-perl (18)
@@ -233,6 +235,58 @@ aws --profile personal s3 cp --acl=public-read ~/src/huffduff-video/s3_robots.tx
 
 I put this in a cron job to run every 30d. I had to run `aws configure` first
 and give it the key id and secret.
+
+To find a specific bot's IPs:
+
+```shell
+$ grep -R FlipboardProxy . | cut -d' ' -f5 |sort |uniq
+34.207.219.235
+34.229.167.12
+34.229.216.231
+52.201.0.135
+52.207.240.171
+54.152.58.154
+54.210.190.43
+54.210.24.16
+```
+
+...and then to block them, [add them to the bucket policy](https://docs.aws.amazon.com/AmazonS3/latest/dev/example-bucket-policies.html):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Id": "Block IPs",
+  "Statement": [
+    {
+      "Sid": "Block FlipboardProxy (IPs collected 1/25-26/2017)",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": "arn:aws:s3:::huffduff-video/*",
+      "Condition": {
+        "IpAddress": {
+          "aws:SourceIp": [
+            "34.207.219.235/32",
+            "34.229.167.12/32",
+            "34.229.216.231/32",
+            "52.201.0.135/32",
+            "52.207.240.171/32",
+            "54.152.58.154/32",
+            "54.210.190.43/32",
+            "54.210.24.16/32"
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+While doing this, I discovered something a bit interesting: Huffduffer itself seems to download a copy of every podcast that gets huffduffed, ie the full MP3 file. It does this with no user agent, from 146.185.159.94, which reverse DNS resolves to [huffduffer.com](https://huffduffer.com/).
+
+I can't tell that any Huffduffer feature is based on the actual audio from each podcast, so I wonder why they download them. I doubt they keep them all. [Jeremy probably knows why!](https://adactio.com/)
+
+Something also downloads a lot from 54.154.42.3 (on Amazon EC2) with user agent `Ruby`. No reverse DNS there though.
 
 
 ## Memory tuning
