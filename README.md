@@ -23,15 +23,11 @@ it under the [CC0 license](http://creativecommons.org/publicdomain/zero/1.0/).
 * [iOS workflow](http://www.512pixels.net/blog/2014/12/from-youtube-to-huffduffer-with-workflow) that does the same thing as huffduff-video, except all client side: downloads a YouTube video, converts it to MP3, uploads the MP3 to Dropbox, and passes it to Huffduffer.
 
 
-## Storage
+## Cost and storage
 
-The [`aws` command line tool](https://aws.amazon.com/cli/) is nice, but the man
-page isn't very useful.
-[Here's the online reference](http://docs.aws.amazon.com/cli/latest/reference/),
-[here's `aws s3`](http://docs.aws.amazon.com/cli/latest/reference/s3/index.html)
-(high level but minimal), and
-[here's `aws s3api`](http://docs.aws.amazon.com/cli/latest/reference/s3api/index.html)
-(much more powerful).
+[I track monthly costs here.](https://docs.google.com/spreadsheets/d/1L578Dvfgi5UJpDM_Gy65Mu8iI0rKAXGB32R0DXuypVc/edit#gid=1172964992) They come from [this AWS billing page](https://console.aws.amazon.com/billing/home?region=us-west-2#/paymenthistory/history?redirected).
+
+As for determining storage usage, the [`aws` command line tool](https://aws.amazon.com/cli/) is nice, but the man page isn't very useful. [Here's the online reference](http://docs.aws.amazon.com/cli/latest/reference/), [here's `aws s3`](http://docs.aws.amazon.com/cli/latest/reference/s3/index.html) (high level but minimal), and [here's `aws s3api`](http://docs.aws.amazon.com/cli/latest/reference/s3api/index.html) (much more powerful).
 
 Run this see the current usage (from http://serverfault.com/a/644795/274369):
 
