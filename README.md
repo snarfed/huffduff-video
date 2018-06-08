@@ -380,6 +380,7 @@ sudo ln -s ~/src/huffduff-video/app.py
 cd /var/www/html
 sudo ln -s ~/src/huffduff-video/static/index.html
 sudo ln -s ~/src/huffduff-video/static/robots.txt
+sudo ln -s ~/src/huffduff-video/static/util.js
 
 touch ~/crontab
 # clean up /tmp every hour
