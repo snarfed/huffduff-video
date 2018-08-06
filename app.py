@@ -14,6 +14,7 @@ import ssl
 from string import Template
 import sys
 import urllib
+import urlparse
 
 import boto
 import boto.ec2.cloudwatch
@@ -50,6 +51,10 @@ AWS_SECRET_KEY = read('aws_secret_key')
 S3_BUCKET = 'huffduff-video'
 S3_BASE = 'https://%s.s3-us-west-2.amazonaws.com/' % S3_BUCKET
 
+DOMAIN_BLACKLIST = frozenset((
+  'www.bbc.co.uk',
+))
+
 # ffmpeg on Ryan's laptop is installed in /usr/local/bin, so add it to PATH.
 if '/usr/local/bin' not in os.environ['PATH']:
   os.environ['PATH'] += ':/usr/local/bin'
@@ -71,6 +76,12 @@ def application(environ, start_response):
   if not url:
     return webob.exc.HTTPBadRequest('Missing required parameter: url')(
       environ, start_response)
+
+  parsed = urlparse.urlparse(url)
+  if parsed.netloc in DOMAIN_BLACKLIST:
+    return webob.exc.HTTPBadRequest(
+      'Sorry, this content is not currently supported due to copyright.')(
+        environ, start_response)
 
   # check that our CPU credit balance isn't too low
   try:
