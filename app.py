@@ -52,7 +52,8 @@ S3_BUCKET = 'huffduff-video'
 S3_BASE = 'https://%s.s3-us-west-2.amazonaws.com/' % S3_BUCKET
 
 DOMAIN_BLACKLIST = frozenset((
-  'www.bbc.co.uk',
+  'www.bbc.co.uk',  # copyright request on 8/6/2018
+  'www.bbc.com',
 ))
 
 # ffmpeg on Ryan's laptop is installed in /usr/local/bin, so add it to PATH.
