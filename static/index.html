@@ -8,6 +8,7 @@
   <script src="/util.js"></script>
   <style type="text/css" media="screen">
   body {
+    font-family: sans-serif;
     text-align: center;
     max-width: 960px;
     margin: 10px auto;
@@ -22,32 +23,77 @@
     background-color: #acf;
   }
 
+  .warning {
+    display: box;
+    background-color: #eee;
+    padding: 1.5em;
+    width: 80%;
+    margin: 1.5em auto;
+    text-align: left;
+  }
+
+  input[type=url] {
+    width: 80%;
+    padding: 12px 20px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+  }
+
+  input[type=submit] {
+    padding: 12px;
+    margin: 8px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+  }
+
+  header,
+  section,
+  form {
+    margin-top: 3em;
+    margin-bottom: 3em;
+  }
+
+  footer {
+    margin-top: 3em;
+  }
+
   </style>
 </head>
 
 <body>
-  <h1>huffduff-video</h1>
-  <p>Extracts the audio from videos on YouTube, Vimeo, and
-    <a href="http://rg3.github.io/youtube-dl/supportedsites.html">many more sites</a> and sends it to <a href="http://huffduffer.com/">Huffduffer</a>.</p>
-  <p>Add this bookmarklet to your browser and use it on any video page:</p>
-  <p>
-    <a class="bookmarklet" href="javascript:var%20w=window.open('http://huffduff-video.snarfed.org/get?url='+encodeURIComponent(location.href),'huffduff','scrollbars=1,status=0,resizable=1,location=0,toolbar=0,width=360,height=480');">
-    huffduff-video!
-  </a>
-  </p>
-  <p>Or enter a video URL here:
-    <form method="post" action="/get">
-      <input type="url" name="url" />
-      <input type="submit" value="Go" />
-    </form>
-  </p>
+  <header>
+    <h1>huffduff-video</h1>
+    <p>Extracts the audio from videos on YouTube, Vimeo, and
+      <a href="http://rg3.github.io/youtube-dl/supportedsites.html">many more sites</a> and sends it to <a href="http://huffduffer.com/">Huffduffer</a>.</p>
+  </header>
+  <section>
+    <p>Add this bookmarklet to your browser and use it on any video page:
+      <a class="bookmarklet" href="javascript:var%20w=window.open('http://huffduff-video.snarfed.org/get?url='+encodeURIComponent(location.href),'huffduff','scrollbars=1,status=0,resizable=1,location=0,toolbar=0,width=360,height=480');">
+      huffduff-video!
+    </a>
+    </p>
+  </section>
+  <section>
+
+      <form method="post" action="/get">
+        <label for="url">Or enter a video URL here:</label>
+
+        <input type="url" name="url" placeholder="URL" />
+        <input type="submit" value="Go" />
+      </form>
+
+  </section>
   <br>
-  <p class="warning"><em>Warning:</em> the UI is not great. Downloading and transcoding video takes time, often tens of seconds to minutes. Sometimes you'll see progress text, but often you'll see nothing for a while, even at the very beginning. Please be patient.
+  <p class="warning"><em>Warning:</em> The UI is not great. Downloading and transcoding video takes time, often tens of seconds to minutes. Sometimes you'll see progress text, but often you'll see nothing for a while, even at the very beginning. Please be patient.</p>
+  <p>
     <a href="http://github.com/snarfed/huffduff-video">Improvements are welcome!</a>
   </p>
-  <p>Audio files are stored for 30 days, then deleted. Be sure to download them before then!</p>
-  <p> Source at <a href="https://github.com/snarfed/huffduff-video">
+  <footer>
+    <p><small>Note: Audio files are stored for 30 days, then deleted. Be sure to download them before then!</small></p>
+    <p>Source at <a href="https://github.com/snarfed/huffduff-video">
   github.com/snarfed/huffduff-video</a>.</p>
+  </footer>
 </body>
 
 </html>
