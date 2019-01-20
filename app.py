@@ -183,7 +183,7 @@ def application(environ, start_response):
       yield 'Already downloaded! <br />\n'
     else:
       # download video and extract mp3
-      yield 'Downloading...<br />\n'
+      yield 'Downloading (this can take a while)...<br />\n'
       with handle_errors(write):
         youtube_dl.YoutubeDL(options).download([url])
 
