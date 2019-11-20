@@ -16,8 +16,9 @@ import sys
 import urllib
 import urlparse
 
-import boto
+from b2sdk.v1 import InMemoryAccountInfo, B2Api, AbstractProgressListener
 import boto.ec2.cloudwatch
+import requests
 import webob
 import webob.exc
 import youtube_dl
@@ -48,8 +49,10 @@ def read(filename):
 
 AWS_KEY_ID = read('aws_key_id')
 AWS_SECRET_KEY = read('aws_secret_key')
-S3_BUCKET = 'huffduff-video'
-S3_BASE = 'https://%s.s3-us-west-2.amazonaws.com/' % S3_BUCKET
+B2_KEY_ID = read('b2_key_id')
+B2_APP_KEY = read('b2_app_key')
+B2_BUCKET = 'huffduff-video'
+B2_BASE = 'https://f000.backblazeb2.com/file/%s/' % B2_BUCKET
 
 DOMAIN_BLACKLIST = frozenset((
   'www.bbc.co.uk',  # copyright request on 8/6/2018
@@ -167,48 +170,62 @@ def application(environ, start_response):
     #
     # ext4 max filename length is 255 bytes, and huffduffer also silently
     # truncates URLs to 255 chars total, so truncate before that if necessary.
-    filename_prefix = ydl.prepare_filename(info)[:245 - len(S3_BASE)]
+    filename_prefix = ydl.prepare_filename(info)[:245 - len(B2_BASE)]
     options['outtmpl'] = filename_prefix.replace('%', '%%') + '.%(ext)s'
     filename = filename_prefix + '.mp3'
 
-    s3 = boto.connect_s3(aws_access_key_id=AWS_KEY_ID,
-                         aws_secret_access_key=AWS_SECRET_KEY)
-    bucket = s3.get_bucket(S3_BUCKET)
-    # strip the filename's path, scheme, and leading www., mobile, or m.
-    # the resulting S3 key will look like 'youtube.com_watchv=6dyWlM4ej3Q.mp3'
-    s3_key = re.sub('^https?_-_((www|m|mobile|player).)?', '', os.path.basename(filename))
-    key = bucket.get_key(s3_key, validate=False)
+    b2api = B2Api(InMemoryAccountInfo())
+    b2api.authorize_account('production', B2_KEY_ID, B2_APP_KEY)
+    bucket = b2api.get_bucket_by_name(B2_BUCKET)
 
-    if key.exists():
+    # strip the filename's path, scheme, and leading www., mobile, or m.
+    # the resulting filename will look like 'youtube.com_watchv=6dyWlM4ej3Q.mp3'
+    b2_filename = re.sub('^https?_-_((www|m|mobile|player).)?', '', os.path.basename(filename))
+    b2_url = bucket.get_download_url(b2_filename)
+
+    uploaded_time = datetime.datetime.now()
+    existing = requests.head(b2_url)
+    if existing.ok:
       yield 'Already downloaded! <br />\n'
+      try:
+        uploaded_time = datetime.datetime.utcfromtimestamp(
+          int(existing.headers.get('X-Bz-Upload-Timestamp')) / 1000)  # ms
+      except:
+        # missing or bad header
+        pass
     else:
       # download video and extract mp3
       yield 'Downloading (this can take a while)...<br />\n'
       with handle_errors(write):
         youtube_dl.YoutubeDL(options).download([url])
 
-      # upload to S3
-      # http://docs.pythonboto.org/en/latest/s3_tut.html
-      yield 'Uploading to S3...<br />\n'
+      # upload to B2
+      yield 'Uploading to B2...<br />\n'
 
-      def upload_callback(sent, total):
-        write('<span><progress max="100" value="%s"></progress><br /> '
-              '%.2fMB of %.2fMB</span>\n' % (
-                (sent * 100 / total), float(sent) / 1000000, float(total) / 1000000))
+      class WriteProgress(AbstractProgressListener):
+        def set_total_bytes(self, total):
+          self.total = total
 
-      key.set_contents_from_filename(filename, cb=upload_callback)
-      key.make_public()
+        def bytes_completed(self, sent):
+          write('<span><progress max="100" value="%s"></progress><br /> '
+                '%.2fMB of %.2fMB</span>\n' % (
+                  (sent * 100 / self.total), float(sent) / 1000000,
+                  float(self.total) / 1000000))
+
+        def close(self):
+          pass
+
+      with WriteProgress() as listener:
+        bucket.upload_local_file(filename, b2_filename, progress_listener=listener)
       os.remove(filename)
 
-    # get metadata, specifically last_modified
-    key = bucket.get_key(s3_key)
     # generate description
     description = info.get('description') or ''
     footer = """\
 Original video: %s
 Downloaded by http://huffduff-video.snarfed.org/ on %s
-Available for 30 days after download""" % (url, key.last_modified)
-    # last_modified format is RFC 7231, e.g. 'Fri, 22 Jul 2016 07:11:46 GMT'
+Available for 30 days after download""" % (
+  url, uploaded_time.replace(microsecond=0).ctime())
     if description:
       footer = """
 
@@ -226,7 +243,7 @@ Available for 30 days after download""" % (url, key.last_modified)
 window.location = "https://huffduffer.com/add?popup=true&%s";
 </script>
 """ % urllib.urlencode([(k, v.encode('utf-8')) for k, v in
-      (('bookmark[url]', (S3_BASE + s3_key)),
+      (('bookmark[url]', (b2_url)),
        ('bookmark[title]', info.get('title') or ''),
        ('bookmark[description]', description),
        ('bookmark[tags]', ','.join(info.get('categories') or [])),

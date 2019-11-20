@@ -32,7 +32,7 @@ As for determining storage usage, the [`aws` command line tool](https://aws.amaz
 Run this see the current usage (from http://serverfault.com/a/644795/274369):
 
 ```shell
-aws --profile=personal s3api list-objects --bucket huffduff-video \
+aws --profile=personal s3api list-objects-v2 --bucket huffduff-video \
   --query "[sum(Contents[].Size), length(Contents[])]"
 ```
 
@@ -175,7 +175,7 @@ waited 24h, then ran these commands to collect and aggregate the logs:
 ```shell
 aws --profile personal s3 sync s3://huffduff-video/logs .
 grep -R REST.GET.OBJECT . | grep ' 200 ' | grep -vE 'robots.txt|logs/20' \
-  | cut -d' ' -f8,20- | sort | uniq -c | sort -n -r > user_agents
+  | sed -E 's/[A-Za-z0-9\/+=_-]{32,76}/X/g' | cut -d' ' -f8,20- | sort | uniq -c | sort -n -r > user_agents
 grep -R REST.GET.OBJECT . | grep ' 200 ' | grep -vE 'robots.txt|logs/20' \
   | cut -d' ' -f5 | sort | uniq -c | sort -n -r > ips
 ```
