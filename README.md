@@ -9,7 +9,7 @@ for bookmarklet and usage details.
 
 Uses [youtube-dl](http://rg3.github.io/youtube-dl/) to download the video and
 extract its audio track. Stores the resulting MP3 file in
-[S3](https://aws.amazon.com/s3).
+[Backblaze B2](https://www.backblaze.com/b2/).
 
 License: this project is placed in the public domain. Alternatively, you may use
 it under the [CC0 license](http://creativecommons.org/publicdomain/zero/1.0/).
@@ -25,45 +25,11 @@ it under the [CC0 license](http://creativecommons.org/publicdomain/zero/1.0/).
 
 ## Cost and storage
 
-[I track monthly costs here.](https://docs.google.com/spreadsheets/d/1L578Dvfgi5UJpDM_Gy65Mu8iI0rKAXGB32R0DXuypVc/edit#gid=1172964992) They come from [this AWS billing page](https://console.aws.amazon.com/billing/home?region=us-west-2#/paymenthistory/history?redirected).
+[I track monthly costs here.](https://docs.google.com/spreadsheets/d/1L578Dvfgi5UJpDM_Gy65Mu8iI0rKAXGB32R0DXuypVc/edit#gid=1172964992) They come from [this B2 billing page](https://secure.backblaze.com/billing.htm), and before that, [this AWS billing page](https://console.aws.amazon.com/billing/home?region=us-west-2#/paymenthistory/history?redirected). The [B2 bucket web UI](https://secure.backblaze.com/b2_buckets.htm) shows the current total number of files and total bytes stored in the `huffduff-video` bucket.
 
-As for determining storage usage, the [`aws` command line tool](https://aws.amazon.com/cli/) is nice, but the man page isn't very useful. [Here's the online reference](http://docs.aws.amazon.com/cli/latest/reference/), [here's `aws s3`](http://docs.aws.amazon.com/cli/latest/reference/s3/index.html) (high level but minimal), and [here's `aws s3api`](http://docs.aws.amazon.com/cli/latest/reference/s3api/index.html) (much more powerful).
+I've configured the [bucket's lifecycle](https://www.backblaze.com/b2/docs/lifecycle_rules.html) to hide files after 31 days, and delete them 1 day after that. I also [configured the bucket settings](https://www.backblaze.com/b2/docs/downloading.html) to send the `Cache-Control: max-age=210240` HTTP header to let clients cache files for up to a year.
 
-Run this see the current usage (from http://serverfault.com/a/644795/274369):
-
-```shell
-aws --profile=personal s3api list-objects-v2 --bucket huffduff-video \
-  --query "[sum(Contents[].Size), length(Contents[])]"
-```
-
-Our S3 bucket lifecycle is in
-[`s3_lifecycle.json`](/snarfed/huffduff-video/blob/master/s3_lifecycle.json).
-I ran these commands to set a lifecycle that deletes files after 30d.
-([Config docs](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTBucketPUTlifecycle.html),
-[`put-bucket-lifecycle` docs](https://docs.aws.amazon.com/cli/latest/reference/s3api/put-bucket-lifecycle.html).)
-
-```shell
-# show an example lifecycle template
-aws s3api put-bucket-lifecycle --generate-cli-skeleton
-
-# set the lifecycle
-aws s3api put-bucket-lifecycle --bucket huffduff-video \
-  --lifecycle-configuration "`json_pp -json_opt loose <s3_lifecycle.json`"
-
-# check that it's there
-aws s3api get-bucket-lifecycle --bucket huffduff-video
-```
-
-
-As of 3/10/2015, users are putting roughly 2GB/day into S3, ie 180GB steady
-state for the lifecycle period of 90d.
-[At $.03/GB/month](https://aws.amazon.com/s3/pricing/#Storage_Pricing), that
-costs $5.40/month. I could use
-[RRS (Reduced Redundancy Storage)](https://aws.amazon.com/s3/faqs/#Reduced_Redundancy_Storage_%28RRS%29),
-which costs [$.024/GB/month](https://aws.amazon.com/s3/pricing/#Storage_Pricing)
-ie $4.32/month, but that's not a big difference.
-
-There are definitely cheaper alternatives outside AWS. [Backblaze B2](https://www.backblaze.com/b2/), for example, [is < 1/4 S3's price](https://www.backblaze.com/b2/cloud-storage-pricing.html). Worth a look if S3 gets too expensive.
+I originally used AWS S3 instead of B2, but S3 eventually got too expensive. As of 11/21/2019, huffduff-video was storing ~200GB steady state, and downloads were using well over 2T/month of bandwidth, so my S3 bill alone was >$200/month.
 
 
 ## Monitoring
@@ -164,13 +130,9 @@ aws --region us-west-2 logs describe-metric-filters --log-group-name /var/log/ht
 
 ## Understanding bandwidth usage
 
-As of 2015-04-29, huffduff-video is serving ~257 GB/mo (via S3), which costs
-~$24/mo in bandwidth alone. I'm ok with that, but I think it could be lower.
+Back in April 2015, I did a bit of research to understand who was downloading huffduff-video files, to see if I could optimize its bandwidth usage by blocking non-human users.
 
-As always, measure first, then optimize. To learn a bit more about who's
-downloading these files, I turned on
-[S3 access logging](http://docs.aws.amazon.com/AmazonS3/latest/dev/ServerLogs.html),
-waited 24h, then ran these commands to collect and aggregate the logs:
+As always, measure first, then optimize. To learn a bit more about who's downloading these files, I turned on [S3 access logging](http://docs.aws.amazon.com/AmazonS3/latest/dev/ServerLogs.html), waited 24h, then ran these commands to collect and aggregate the logs:
 
 ```shell
 aws --profile personal s3 sync s3://huffduff-video/logs .
