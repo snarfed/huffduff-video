@@ -1,6 +1,6 @@
 """Extracts audio from Youtube (etc) videos to send to Huffduffer.
 
-Short test video: http://youtu.be/6dyWlM4ej3Q
+Short test video: https://youtu.be/6dyWlM4ej3Q
 """
 
 __author__ = ['Ryan Barrett <huffduff-video@ryanb.org>']
@@ -13,11 +13,11 @@ import re
 import ssl
 from string import Template
 import sys
-import urllib
-import urlparse
+import urllib.parse
 
-from b2sdk.v1 import InMemoryAccountInfo, B2Api, AbstractProgressListener
-import boto.ec2.cloudwatch
+from b2sdk.account_info.in_memory import InMemoryAccountInfo
+from b2sdk.api import B2Api
+from b2sdk.progress import AbstractProgressListener
 import requests
 import webob
 import webob.exc
@@ -47,8 +47,6 @@ def read(filename):
   with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), filename)) as f:
     return f.read().strip()
 
-AWS_KEY_ID = read('aws_key_id')
-AWS_SECRET_KEY = read('aws_secret_key')
 B2_KEY_ID = read('b2_key_id')
 B2_APP_KEY = read('b2_app_key')
 B2_BUCKET = 'huffduff-video'
@@ -81,34 +79,15 @@ def application(environ, start_response):
     return webob.exc.HTTPBadRequest('Missing required parameter: url')(
       environ, start_response)
 
-  parsed = urlparse.urlparse(url)
+  parsed = urllib.parse.urlparse(url)
   if parsed.netloc in DOMAIN_BLACKLIST:
     return webob.exc.HTTPBadRequest(
       'Sorry, this content is not currently supported due to copyright.')(
         environ, start_response)
 
-  # check that our CPU credit balance isn't too low
-  try:
-    cloudwatch = boto.ec2.cloudwatch.connect_to_region(
-      'us-west-2', aws_access_key_id=AWS_KEY_ID,
-      aws_secret_access_key=AWS_SECRET_KEY)
-    for metric in cloudwatch.list_metrics(metric_name='CPUCreditBalance'):
-      if metric.name == 'CPUCreditBalance':
-        stats = metric.query(datetime.datetime.now() - datetime.timedelta(minutes=10),
-                             datetime.datetime.now(), ['Average'])
-        if stats:
-          credit = stats[-1].get('Average')
-          if credit and credit <= 30:
-            msg = "Sorry, we're too busy right now. Please try again later!"
-            exc = webob.exc.HTTPServiceUnavailable(msg)
-            exc.html_template_obj = Template(HTML_HEADER + msg + HTML_FOOTER)
-            return exc(environ, start_response)
-  except:
-    logging.exception("Couldn't fetch CPU credit balance from CloudWatch!")
-
   write_fn = start_response('200 OK', headers)
   def write(line):
-    write_fn(line.encode('utf-8'))
+    write_fn(line.encode())
 
   def run():
     """Generator that does all the work and yields the response body lines.
@@ -117,8 +96,8 @@ def application(environ, start_response):
     an exception. Currently the log only gets the exception message. Wrapping
     the call at the bottom in try/except doesn't work since it's a generator. :/
     """
-    yield HTML_HEADER
-    yield ('<div id="progress">\nFetching %s ...<br />' % url).encode('utf-8')
+    yield HTML_HEADER.encode()
+    yield ('<div id="progress">\nFetching %s ...<br />' % url).encode()
 
     # function to print out status while downloading
     def download_progress_hook(progress):
@@ -186,7 +165,7 @@ def application(environ, start_response):
     uploaded_time = datetime.datetime.now()
     existing = requests.head(b2_url)
     if existing.ok:
-      yield 'Already downloaded! <br />\n'
+      yield 'Already downloaded! <br />\n'.encode()
       try:
         uploaded_time = datetime.datetime.utcfromtimestamp(
           int(existing.headers.get('X-Bz-Upload-Timestamp')) / 1000)  # ms
@@ -195,12 +174,12 @@ def application(environ, start_response):
         pass
     else:
       # download video and extract mp3
-      yield 'Downloading (this can take a while)...<br />\n'
+      yield 'Downloading (this can take a while)...<br />\n'.encode()
       with handle_errors(write):
         youtube_dl.YoutubeDL(options).download([url])
 
       # upload to B2
-      yield 'Uploading to B2...<br />\n'
+      yield 'Uploading to B2...<br />\n'.encode()
 
       class WriteProgress(AbstractProgressListener):
         def set_total_bytes(self, total):
@@ -238,17 +217,17 @@ Available for 30 days after download""" % (
     description += footer
 
     # open 'Huffduff it' page
-    yield """\n<br />Opening Huffduffer dialog...
+    yield ("""\n<br />Opening Huffduffer dialog...
 <script type="text/javascript">
 window.location = "https://huffduffer.com/add?popup=true&%s";
 </script>
-""" % urllib.urlencode([(k, v.encode('utf-8')) for k, v in
+""" % urllib.parse.urlencode([(k, v.encode()) for k, v in
       (('bookmark[url]', (b2_url)),
        ('bookmark[title]', info.get('title') or ''),
        ('bookmark[description]', description),
        ('bookmark[tags]', ','.join(info.get('categories') or [])),
-     )])
-    yield HTML_FOOTER
+     )])).encode()
+    yield HTML_FOOTER.encode()
 
     # alternative:
     # http://themindfulbit.com/blog/optimizing-your-podcast-site-for-huffduffer
@@ -261,7 +240,7 @@ def handle_errors(write):
   """Wraps youtube_dl calls in a try/except and handles errors."""
   try:
     yield
-  except Exception, e:
+  except Exception as e:
     write('<p>%s</p>\n' % e)
     if isinstance(e, (youtube_dl.DownloadError, youtube_dl.utils.ExtractorError)):
       write("""\
