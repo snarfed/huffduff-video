@@ -25,17 +25,105 @@ I've configured the [bucket's lifecycle](https://www.backblaze.com/b2/docs/lifec
 I originally used AWS S3 instead of B2, but S3 eventually got too expensive. As of 11/21/2019, huffduff-video was storing ~200GB steady state, and downloads were using well over 2T/month of bandwidth, so my S3 bill alone was >$200/month.
 
 
+## System setup
+
+Currently on an [AWS EC2 t2.micro instance](https://aws.amazon.com/ec2/instance-types/) on [Ubuntu 18](https://help.ubuntu.com/lts/serverguide/).
+
+I started it originally on a t2.micro. I migrated it to a t2.nano on 2016-03-24, but usage outgrew the nano's CPU quota, so I migrated back to a t2.micro on 2016-05-25.
+
+I did both migrations by making an snapshot of the t2.micro's EBS volume, making an AMI from the snapshot, then launching a new t2.nano instance using that AMI. [Details.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html#creating-launching-ami-from-snapshot)
+
+Here's how I set it up:
+
+```shell
+# set up swap
+sudo dd if=/dev/zero of=/var/swapfile bs=1M count=4096
+sudo chmod 600 /var/swapfile
+sudo mkswap /var/swapfile
+sudo swapon /var/swapfile
+
+# add my dotfiles
+mkdir src
+cd src
+git clone git@github.com:snarfed/dotfiles.git
+cd
+ln -s src/dotfiles/.cshrc
+ln -s src/dotfiles/.gitconfig
+ln -s src/dotfiles/.git_excludes
+ln -s src/dotfiles/.python
+
+# install core system packages and config
+sudo apt-get update
+sudo apt-get install apache2 libapache2-mod-wsgi-py3 tcsh python3 python3-pip ffmpeg
+sudo pip3 install -U pip
+sudo chsh ubuntu
+# enter /bin/tcsh
+
+# install and set up huffduff-video
+cd ~/src
+git clone https://github.com/snarfed/huffduff-video.git
+sudo pip3 install b2sdk boto webob youtube-dl
+
+# add these lines to /etc/httpd/conf/httpd.conf
+#
+# # rest is for huffduff-video!
+# Options FollowSymLinks
+# WSGIScriptAlias /get /var/www/cgi-bin/app.py
+# LogLevel info
+#
+# # tune number of prefork server processes
+# StartServers       8
+# ServerLimit        12
+# MaxClients         12
+# MaxRequestsPerChild  4000
+
+# start apache
+sudo service apache2 start
+systemctl status apache2.service
+sudo systemctl enable apache2.service
+sudo chmod a+rx /var/log/apache2
+sudo chmod -R a+r /var/log/apache2
+
+# on local laptop
+cd ~/src/huffduff-video/
+scp b2_* aws_* ubuntu@[IP]:src/huffduff-video/
+
+# back on EC2
+cd /var/www/
+sudo mkdir cgi-bin
+cd cgi-bin
+sudo ln -s ~/src/huffduff-video/app.py
+cd /var/www/html
+sudo ln -s ~/src/huffduff-video/static/index.html
+sudo ln -s ~/src/huffduff-video/static/robots.txt
+sudo ln -s ~/src/huffduff-video/static/util.js
+
+# install cron jobs
+cd
+cat > ~/crontab << EOF
+# clean up /tmp every hour
+0 * * * *  find /tmp/ -user www-data -not -newermt yesterday | xargs rm
+# auto upgrade youtube-dl daily
+10 10 * * *  sudo pip3 install -U youtube-dl; sudo service apache2 restart
+# recopy robots.txt to S3 since our bucket expiration policy deletes it monthly
+1 2 3 * *  aws s3 cp --acl=public-read ~/src/huffduff-video/s3_robots.txt s3://huffduff-video/robots.txt
+EOF
+crontab crontab
+```
+
+
 ## Monitoring
 
+I use [Google Stackdriver](https://app.google.stackdriver.com/) to monitor huffduff-video with black box HTTP probes to its home page. If enough of them fail in a given time window, it emails me.
 
-I set up [CloudWatch](https://console.aws.amazon.com/cloudwatch/) to monitor and alarm on EC2 instance system checks, billing thresholds, HTTP logs, and application level exceptions. When alarms fire, it emails and SMSes me.
+I used to use [CloudWatch](https://console.aws.amazon.com/cloudwatch/) to monitor and alarm on EC2 instance system checks, billing thresholds, HTTP logs, and application level exceptions. When alarms fired, it emailed and SMSed me.
 
-The [monitoring alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-west-2) are in us-west-2 (Oregon), but the [billing alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1) have to be in us-east-1 (Virginia). Each region has its own SNS topic for notifications: [us-east-1](https://console.aws.amazon.com/sns/v2/home?region=us-east-1#/topics/arn:aws:sns:us-east-1:996569606388:NotifyMe) [us-west-2](https://console.aws.amazon.com/sns/v2/home?region=us-west-2#/topics/arn:aws:sns:us-west-2:996569606388:huffduff-video)
+The [monitoring alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-west-2) were in us-west-2 (Oregon), but the [billing alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1) had to be in us-east-1 (Virginia). Each region has its own SNS topic for notifications: [us-east-1](https://console.aws.amazon.com/sns/v2/home?region=us-east-1#/topics/arn:aws:sns:us-east-1:996569606388:NotifyMe) [us-west-2](https://console.aws.amazon.com/sns/v2/home?region=us-west-2#/topics/arn:aws:sns:us-west-2:996569606388:huffduff-video)
 
 
 ### System metrics
 
-To get system-level custom metrics for memory, swap, and disk space, I set up [Amazon's custom monitoring scripts](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/mon-scripts-perl.html).
+To get system-level custom metrics for memory, swap, and disk space, set up [Amazon's custom monitoring scripts](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/mon-scripts-perl.html).
 
 ```shell
 sudo yum install perl-DateTime perl-Sys-Syslog perl-LWP-Protocol-https
@@ -209,87 +297,3 @@ While doing this, I discovered something a bit interesting: Huffduffer itself se
 I can't tell that any Huffduffer feature is based on the actual audio from each podcast, so I wonder why they download them. I doubt they keep them all. [Jeremy probably knows why!](https://adactio.com/)
 
 Something also downloads a lot from 54.154.42.3 (on Amazon EC2) with user agent `Ruby`. No reverse DNS there though.
-
-
-## System setup
-
-Currently on an [AWS EC2 t2.micro instance](https://aws.amazon.com/ec2/instance-types/) on [Amazon Linux 2](https://aws.amazon.com/amazon-linux-2/).
-
-I started it originally on a t2.micro. I migrated it to a t2.nano on 2016-03-24, but usage outgrew the nano's CPU quota, so I migrated back to a t2.micro on 2016-05-25.
-
-I did both migrations by making an snapshot of the t2.micro's EBS volume, making an AMI from the snapshot, then launching a new t2.nano instance using that AMI. [Details.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html#creating-launching-ami-from-snapshot)
-
-Here's how I set it up:
-
-```shell
-# set up swap
-sudo dd if=/dev/zero of=/var/swapfile bs=1M count=4096
-sudo chmod 600 /var/swapfile
-sudo mkswap /var/swapfile
-sudo swapon /var/swapfile
-
-# add my dotfiles
-mkdir src
-cd src
-git clone git@github.com:snarfed/dotfiles.git
-cd
-ln -s src/dotfiles/.cshrc
-ln -s src/dotfiles/.gitconfig
-ln -s src/dotfiles/.git_excludes
-ln -s src/dotfiles/.python
-
-# install core system packages and config
-sudo yum install python3 git mod_wsgi tcsh util-linux-user
-sudo pip3 install -U pip
-sudo passwd ec2-user
-chsh
-# enter /bin/tcsh and password set just before
-
-# install and set up huffduff-video
-cd ~
-chmod a+rx /home/ec2-user
-chmod a+rx ~/src
-git clone https://github.com/snarfed/huffduff-video.git
-sudo pip3 install b2sdk boto webob youtube-dl
-
-# add these lines to /etc/httpd/conf/httpd.conf
-#
-# # rest is for huffduff-video!
-# Options FollowSymLinks
-# WSGIScriptAlias /get /var/www/cgi-bin/app.py
-# LogLevel info
-#
-# # tune number of prefork server processes
-# # see http://fuscata.com/kb/set-maxclients-apache-prefork etc.
-# StartServers       8
-# MinSpareServers    2
-# MaxSpareServers    4
-# ServerLimit        12
-# MaxClients         12
-# MaxRequestsPerChild  4000
-
-# start apache
-sudo systemctl start httpd
-systemctl status httpd
-sudo systemctl enable httpd.service
-sudo chmod a+rx /var/log/httpd
-sudo chmod -R a+r /var/log/httpd
-
-# create and fill in aws_key_id and aws_secret_key files
-
-cd /var/www/cgi-bin
-sudo ln -s ~/src/huffduff-video/app.py
-cd /var/www/html
-sudo ln -s ~/src/huffduff-video/static/index.html
-sudo ln -s ~/src/huffduff-video/static/robots.txt
-sudo ln -s ~/src/huffduff-video/static/util.js
-
-touch ~/crontab
-# clean up /tmp every hour
-echo "0 * * * *\tfind /tmp/ -user apache -not -newermt yesterday | xargs rm" >> ~/crontab
-# auto upgrade youtube-dl daily
-echo "10 10 * * *	sudo pip install -U youtube-dl; sudo service httpd restart" >> ~/crontab
-# recopy robots.txt to S3 since our bucket expiration policy deletes it monthly
-echo "1 2 3 * *	aws s3 cp --acl=public-read ~/src/huffduff-video/s3_robots.txt s3://huffduff-video/robots.txt"
-crontab crontab
-```
