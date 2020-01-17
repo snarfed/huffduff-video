@@ -1,4 +1,8 @@
-# Use the official lightweight Python image.
+# Currently unused. Originally used for Google Cloud Run. Ideally we'd use this
+# again at some point on some serverless platform that supports containers and
+# streaming HTTP responses!
+#
+# Uses the official lightweight Python image.
 # https://hub.docker.com/_/python
 FROM python:3.7-slim
 

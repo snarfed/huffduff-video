@@ -16,60 +16,109 @@ License: this project is placed in the public domain. Alternatively, you may use
 * [iOS workflow](http://www.512pixels.net/blog/2014/12/from-youtube-to-huffduffer-with-workflow) that does the same thing as huffduff-video, except all client side: downloads a YouTube video, converts it to MP3, uploads the MP3 to Dropbox, and passes it to Huffduffer.
 
 
-## Development and ops
-
-huffduff-video runs on [Google Cloud Run](https://cloud.google.com/run/), a fully managed [Knative](https://knative.dev/) service. It's a simple Python 3 WSGI application in [app.py](https://github.com/snarfed/huffduff-video/blob/master/app.py), served by [gunicorn](https://docs.gunicorn.org/en/) inside a [Docker container](https://github.com/snarfed/huffduff-video/blob/master/Dockerfile). Generated MP3 files are uploaded to and served from [Backblaze B2](https://www.backblaze.com/b2/).
-
-(Before Cloud Run, [huffduff-video originally ran on AWS EC2](https://github.com/snarfed/huffduff-video/blob/fed4ba636dc0d7936bed2ba4ab6671288e2f1d58/README.md#system-setup).)
-
-To work on it, first fork and clone this repo. Then, in the repo root dir, build and run it locally:
-
-```sh
-docker build . --tag gcr.io/huffduff-video/app
-setenv PORT 8080 && docker run -p 9090:${PORT} -e PORT=${PORT} gcr.io/huffduff-video/app
-```
-
-Once your changes are working and you're ready to deploy, you'll need the [Google Cloud SDK](https://cloud.google.com/sdk/docs/) installed. Then, you can either push the Docker image you built locally with:
-
-```sh
-gcloud auth configure-docker  # only needed the first time
-gcloud config set project huffduff-video
-docker push gcr.io/huffduff-video/app
-```
-
-...or rebuild it in [Cloud Build](https://cloud.google.com/cloud-build/):
-
-```sh
-gcloud builds submit --tag gcr.io/huffduff-video/app
-```
-
-Now, you're ready to deploy!
-
-```sh
-gcloud run deploy app --image gcr.io/huffduff-video/app --region=us-central1 --platform managed --memory=2Gi --concurrency=4
-```
-
-### Static site
-
-The static files at [huffduff-video.snarfed.org](https://huffduff-video.snarfed.org/) are served by [Firebase Hosting](https://firebase.google.com/docs/hosting/). I [followed these instructions to set it up](https://firebase.google.com/docs/hosting/quickstart), added a [rewrites]() section to `[firebase.json](https://github.com/snarfed/huffduff-video/blob/master/firebase.json)` to [redirect `/get` to my Cloud Run container](https://firebase.google.com/docs/hosting/cloud-run#direct_requests_to_container), and then deployed.
-
-```sh
-yarn global add firebase-tools
-firebase login
-firebase init  # choose Hosting, use directory static/, don't overwrite static/index.html
-firebase deploy
-```
-
-I then saw the site serving on [huffduff-video.firebaseapp.com](https://huffduff-video.firebaseapp.com/), and I could [manage it in the Firebase console](https://console.firebase.google.com/u/0/project/huffduff-video/hosting/main). All I had to do then was [connect the huffduff-video.snarfed.org subdomain](https://firebase.google.com/docs/hosting/custom-domain), and I was all set.
-
-
 ## Cost and storage
 
-[I track monthly costs here.](https://docs.google.com/spreadsheets/d/1L578Dvfgi5UJpDM_Gy65Mu8iI0rKAXGB32R0DXuypVc/edit#gid=1172964992) They come from these [B2 billing](https://secure.backblaze.com/billing.htm) and [Google Cloud billing](https://console.cloud.google.com/billing/00904A-705F88-DAEEDC/reports) pages, and before that, [this AWS billing page](https://console.aws.amazon.com/billing/home?region=us-west-2#/paymenthistory/history?redirected). The [B2 bucket web UI](https://secure.backblaze.com/b2_buckets.htm) shows the current total number of files and total bytes stored in the `huffduff-video` bucket.
+[I track monthly costs here.](https://docs.google.com/spreadsheets/d/1L578Dvfgi5UJpDM_Gy65Mu8iI0rKAXGB32R0DXuypVc/edit#gid=1172964992) They come from [this B2 billing page](https://secure.backblaze.com/billing.htm), and before that, [this AWS billing page](https://console.aws.amazon.com/billing/home?region=us-west-2#/paymenthistory/history?redirected). The [B2 bucket web UI](https://secure.backblaze.com/b2_buckets.htm) shows the current total number of files and total bytes stored in the `huffduff-video` bucket.
 
 I've configured the [bucket's lifecycle](https://www.backblaze.com/b2/docs/lifecycle_rules.html) to hide files after 31 days, and delete them 1 day after that. I also [configured the bucket settings](https://www.backblaze.com/b2/docs/downloading.html) to send the `Cache-Control: max-age=210240` HTTP header to let clients cache files for up to a year.
 
 I originally used AWS S3 instead of B2, but S3 eventually got too expensive. As of 11/21/2019, huffduff-video was storing ~200GB steady state, and downloads were using well over 2T/month of bandwidth, so my S3 bill alone was >$200/month.
+
+
+## Monitoring
+
+I set up [CloudWatch](https://console.aws.amazon.com/cloudwatch/) to monitor and
+alarm on EC2 instance system checks, billing thresholds, HTTP logs, and
+application level exceptions. When alarms fire, it emails and SMSes me.
+
+The
+[monitoring alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-west-2)
+are in us-west-2 (Oregon), but
+the [billing alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1)
+have to be in us-east-1 (Virginia). Each region has its own SNS topic for
+notifications:
+[us-east-1](https://console.aws.amazon.com/sns/v2/home?region=us-east-1#/topics/arn:aws:sns:us-east-1:996569606388:NotifyMe)
+[us-west-2](https://console.aws.amazon.com/sns/v2/home?region=us-west-2#/topics/arn:aws:sns:us-west-2:996569606388:huffduff-video)
+
+
+### System metrics
+
+To get system-level custom metrics for memory, swap, and disk space, I set up
+[Amazon's custom monitoring scripts](http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/mon-scripts-perl.html).
+
+```shell
+sudo yum install perl-DateTime perl-Sys-Syslog perl-LWP-Protocol-https
+wget http://aws-cloudwatch.s3.amazonaws.com/downloads/CloudWatchMonitoringScripts-1.2.1.zip
+unzip CloudWatchMonitoringScripts-1.2.1.zip
+rm CloudWatchMonitoringScripts-1.2.1.zip
+cd aws-scripts-mon
+
+cp awscreds.template awscreds.conf
+# fill in awscreds.conf
+./mon-put-instance-data.pl --aws-credential-file ~/aws-scripts-mon/awscreds.conf --mem-util --swap-util --disk-space-util --disk-path=/ --verify
+
+crontab -e
+# add this line:
+# * * * * *	./mon-put-instance-data.pl --aws-credential-file ~/aws-scripts-mon/awscreds.conf --mem-util --swap-util --disk-space-util --disk-path=/ --from-cron
+```
+
+
+### Log collection
+
+To set up HTTP and application level monitoring, I had to:
+* [add an IAM policy](https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/QuickStartEC2Instance.html#d0e9135)
+* [install the logs agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/QuickStartEC2Instance.html#d0e9218) with `sudo yum install awslogs`
+* add my IAM credentials to `/etc/awslogs/awscli.conf` and set region to us-west-2
+* add these lines to `/etc/awslogs/awslogs.conf`:
+```ini
+[/var/log/httpd/access_log]
+file = /var/log/httpd/access_log*
+log_group_name = /var/log/httpd/access_log
+log_stream_name = {instance_id}
+datetime_format = %d/%b/%Y:%H:%M:%S %z
+
+[/var/log/httpd/error_log]
+file = /var/log/httpd/error_log*
+log_group_name = /var/log/httpd/error_log
+log_stream_name = {instance_id}
+datetime_format = %b %d %H:%M:%S %Y
+
+# WSGI writes Python exception stack traces to this log file across multiple
+# lines, and I'd love to collect them multi_line_start_pattern or something
+# similar, but each line is prefixed with the same timestamp + severity + etc
+# prefix as other lines, so I can't.
+```
+* start the agent and restart it on boot:
+```shell
+sudo service awslogs start
+sudo service awslogs status
+sudo chkconfig awslogs on
+```
+* wait a while, then check that the logs are flowing:
+```shell
+aws --region us-west-2 logs describe-log-groups
+aws --region us-west-2 logs describe-log-streams --log-group-name /var/log/httpd/access_log
+aws --region us-west-2 logs describe-log-streams --log-group-name /var/log/httpd/error_log
+```
+* define a few
+[metric filters](https://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/FilterAndPatternSyntax.html)
+so we can graph and query HTTP status codes, error messages, etc:
+```shell
+aws logs put-metric-filter --region us-west-2 \
+  --log-group-name /var/log/httpd/access_log \
+  --filter-name HTTPRequests \
+  --filter-pattern '[ip, id, user, timestamp, request, status, bytes]' \
+  --metric-transformations metricName=count,metricNamespace=huffduff-video,metricValue=1
+
+aws logs put-metric-filter --region us-west-2 \
+  --log-group-name /var/log/httpd/error_log \
+  --filter-name PythonErrors \
+  --filter-pattern '[timestamp, error_label, prefix = "ERROR:root:ERROR:", ...]' \
+  --metric-transformations metricName=errors,metricNamespace=huffduff-video,metricValue=1
+
+aws --region us-west-2 logs describe-metric-filters --log-group-name /var/log/httpd/access_log
+aws --region us-west-2 logs describe-metric-filters --log-group-name /var/log/httpd/error_log
+```
 
 
 ## Understanding bandwidth usage
@@ -86,7 +135,10 @@ grep -R REST.GET.OBJECT . | grep ' 200 ' | grep -vE 'robots.txt|logs/20' \
   | cut -d' ' -f5 | sort | uniq -c | sort -n -r > ips
 ```
 
-This gave me some useful baseline numbers. Over a 24h period, there were 482 downloads, 318 of which came from bots. (That's 2/3!) Out of the six top user agents by downloads, five were bots. The one exception was the [Overcast](http://overcast.fm/) podcast app.
+This gave me some useful baseline numbers. Over a 24h period, there were 482
+downloads, 318 of which came from bots. (That's 2/3!) Out of the six top user
+agents by downloads, five were bots. The one exception was the
+[Overcast](http://overcast.fm/) podcast app.
 
 * [Flipboard](https://flipboard.com/) Proxy (142 downloads)
 * [Googlebot](http://www.google.com/bot.html) (67)
@@ -95,9 +147,20 @@ This gave me some useful baseline numbers. Over a 24h period, there were 482 dow
 * [Yahoo! Slurp](http://help.yahoo.com/help/us/ysearch/slurp) (36)
 * [Googlebot-Video](https://support.google.com/webmasters/answer/1061943) (34)
 
-(Side note: Googlebot-Video is polite and includes `Etag` or `If-Modified-Since` when it refetches files. It sent 68 requests, but exactly half of those resulted in an empty `304` response. Thanks Googlebot-Video!)
+(Side note: Googlebot-Video is polite and includes `Etag` or `If-Modified-Since`
+when it refetches files. It sent 68 requests, but exactly half of those resulted
+in an empty `304` response. Thanks Googlebot-Video!)
 
-I switched huffduff-video to use S3 URLs on the `huffduff-video.s3.amazonaws.com` [virtual host](http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html), added a [`robots.txt` file](https://github.com/snarfed/huffduff-video/tree/master/s3_robots.txt) that blocks all bots, waited 24h, and then measured again. The vast majority of huffduff-video links on [Huffduffer](http://huffduffer.com/) are still on the `s3.amazonaws.com` domain, which doesn't serve my `robots.txt`, so I didn't expect a big difference...but I was wrong. Twitterbot had roughly the same number, but the rest were way down:
+I switched huffduff-video to use S3 URLs on the
+`huffduff-video.s3.amazonaws.com`
+[virtual host](http://docs.aws.amazon.com/AmazonS3/latest/dev/VirtualHosting.html),
+added a
+[`robots.txt` file](https://github.com/snarfed/huffduff-video/tree/master/s3_robots.txt)
+that blocks all bots, waited 24h, and then measured again. The vast majority of
+huffduff-video links on [Huffduffer](http://huffduffer.com/) are still on the
+`s3.amazonaws.com` domain, which doesn't serve my `robots.txt`, so I didn't
+expect a big difference...but I was wrong. Twitterbot had roughly the same
+number, but the rest were way down:
 
 * [Overcast](http://overcast.fm/) (76)
 * [Twitterbot](https://dev.twitter.com/cards/getting-started#crawling) (36)
@@ -107,9 +170,13 @@ I switched huffduff-video to use S3 URLs on the `huffduff-video.s3.amazonaws.com
 * libwww-perl (18)
 * [Googlebot](http://www.google.com/bot.html) (14)
 
-([Googlebot-Video](https://support.google.com/webmasters/answer/1061943) was way farther down the chart with just 4 downloads.)
+([Googlebot-Video](https://support.google.com/webmasters/answer/1061943) was way
+farther down the chart with just 4 downloads.)
 
-This may have been due to the fact that my first measurement was Wed-Thurs, and the second was Fri-Sat, which are slower social media and link sharing days. Still, I'm hoping some of it was due to `robots.txt`. Fingers crossed the bots will eventually go away altogether!
+This may have been due to the fact that my first measurement was Wed-Thurs, and
+the second was Fri-Sat, which are slower social media and link sharing days.
+Still, I'm hoping some of it was due to `robots.txt`. Fingers crossed the bots
+will eventually go away altogether!
 
 To update the `robots.txt` file:
 
@@ -170,3 +237,111 @@ While doing this, I discovered something a bit interesting: Huffduffer itself se
 I can't tell that any Huffduffer feature is based on the actual audio from each podcast, so I wonder why they download them. I doubt they keep them all. [Jeremy probably knows why!](https://adactio.com/)
 
 Something also downloads a lot from 54.154.42.3 (on Amazon EC2) with user agent `Ruby`. No reverse DNS there though.
+
+
+## Memory tuning
+
+`t2.micro`s only have 1GB of memory, so sometimes the system runs out. Lines like these show up in `/var/log/httpd/error_log`:
+
+```
+[Mon Jul 03 11:20:09.050893 2017] [mpm_prefork:error] [pid 26214] (12)Cannot allocate memory: AH00159: fork: Unable to fork new process
+[Mon Jul 03 11:20:19.471164 2017] [reqtimeout:info] [pid 26962] [client 220.253.163.157:54651] AH01382: Request header read timeout
+[Mon Jul 03 12:37:27.462868 2017] [mpm_prefork:info] [pid 26214] AH00162: server seems busy, (you may need to increase StartServers, or Min/MaxSpareServers), spawning 32 children, there are 0 idle, and 7 total children
+[Sun Jul 02 16:54:30.038240 2017] [:error] [pid 5039] [client 174.127.212.155:54658] ImportError: /usr/lib64/python2.7/lib-dynload/_functoolsmodule.so: failed to map segment from shared object: Cannot allocate memory
+```
+
+I made a 4GB swap partition on 2017-07-04 with:
+
+```sh
+sudo dd if=/dev/zero of=/var/swapfile bs=1M count=4096
+sudo chmod 600 /var/swapfile
+sudo mkswap /var/swapfile
+sudo swapon /var/swapfile
+```
+
+## System setup
+
+Currently on EC2 t2.micro instance.
+
+I started it originally on a t2.micro. I migrated it to a t2.nano on 2016-03-24,
+but usage outgrew the nano's CPU quota, so I migrated back to a t2.micro on
+2016-05-25.
+
+I did both migrations by making an snapshot of the t2.micro's EBS volume, making
+an AMI from the snapshot, then launching a new t2.nano instance using that AMI.
+[Details.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-an-ami-ebs.html#creating-launching-ami-from-snapshot)
+
+Here's how I set it up:
+
+```shell
+sudo yum remove httpd httpd-tools  # uninstall apache 2.2 before installing 2.4
+sudo yum install git httpd24 httpd24-tools httpd24-devel mod24_wsgi-python27 python27-devel python27-pip tcsh telnet
+sudo update-alternatives --set python /usr/bin/python2.7
+sudo yum groupinstall 'Web Server' 'PHP Support'
+sudo pip install boto webob youtube-dl
+
+# Check that mod_wsgi is at least version 3.4! We need 3.4 to prevent this error when
+# running youtube-dl under WSGI:
+# AttributeError: 'mod_wsgi.Log' object has no attribute 'isatty'
+#
+# *If* it's not, build 3.4 from scratch (but check that it's also python 2.7!):
+curl -o mod_wsgi-3.4.tar.gz https://modwsgi.googlecode.com/files/mod_wsgi-3.4.tar.gz
+tar xvzf mod_wsgi-3.4.tar.gz
+cd mod_wsgi-3.4
+sudo yum install httpd-devel -y
+./configure
+sudo make install
+
+# add these lines to /etc/httpd/conf/httpd.conf
+#
+# # for huffduff-video
+# LoadModule wsgi_module /usr/lib64/httpd/modules/mod_wsgi27.so
+# Options FollowSymLinks
+# WSGIScriptAlias /get /var/www/cgi-bin/app.py
+# LogLevel info
+#
+# # tune number of prefork server processes
+# # see http://fuscata.com/kb/set-maxclients-apache-prefork etc.
+# StartServers       8
+# MinSpareServers    2
+# MaxSpareServers    4
+# ServerLimit        12
+# MaxClients         12
+# MaxRequestsPerChild  4000
+
+# start apache
+sudo service httpd start
+sudo chkconfig httpd on
+
+# install ffmpeg
+wget http://johnvansickle.com/ffmpeg/releases/ffmpeg-release-64bit-static.tar.xz
+cd /usr/local/bin
+sudo tar xJf ~/ffmpeg-release-64bit-static.tar.xz
+cd /usr/bin
+sudo ln -s ffmpeg-2.5.4-64bit-static/ffmpeg
+sudo ln -s ffmpeg-2.5.4-64bit-static/ffprobe
+
+# clone huffduff-video repo and install for apache
+cd ~
+mkdir src
+chmod a+rx ~/src
+cd src
+git clone git@github.com:snarfed/huffduff-video.git
+# create and fill in aws_key_id and aws_secret_key files
+
+cd /var/www/cgi-bin
+sudo ln -s ~/src/huffduff-video/app.py
+cd /var/www/html
+sudo ln -s ~/src/huffduff-video/static/index.html
+sudo ln -s ~/src/huffduff-video/static/robots.txt
+sudo ln -s ~/src/huffduff-video/static/util.js
+
+touch ~/crontab
+# clean up /tmp every hour
+echo "0 * * * *\tfind /tmp/ -user apache -not -newermt yesterday | xargs rm" >> ~/crontab
+# auto upgrade youtube-dl daily
+echo "10 10 * * *	sudo pip install -U youtube-dl; sudo service httpd restart" >> ~/crontab
+# recopy robots.txt to S3 since our bucket expiration policy deletes it monthly
+echo "1 2 3 * *	aws s3 cp --acl=public-read ~/src/huffduff-video/s3_robots.txt s3://huffduff-video/robots.txt"
+crontab crontab
+```

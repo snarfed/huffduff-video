@@ -1,6 +1,6 @@
 """Extracts audio from Youtube (etc) videos to send to Huffduffer.
 
-Short test video: https://youtu.be/6dyWlM4ej3Q
+Short test video: http://youtu.be/6dyWlM4ej3Q
 """
 
 __author__ = ['Ryan Barrett <huffduff-video@ryanb.org>']
