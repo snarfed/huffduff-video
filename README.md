@@ -16,6 +16,28 @@ License: this project is placed in the public domain. Alternatively, you may use
 * [iOS workflow](http://www.512pixels.net/blog/2014/12/from-youtube-to-huffduffer-with-workflow) that does the same thing as huffduff-video, except all client side: downloads a YouTube video, converts it to MP3, uploads the MP3 to Dropbox, and passes it to Huffduffer.
 
 
+## Requirements
+
+huffduff-video has a few specific requirements that make it a bit harder than usual to ffind a host, so right now it's on a full VM, on AWS EC2. I'd love to switch to a serverless/containerized host instead, but I haven't found one that satisfies all of the requirements yet:
+
+* Python 3 WSGI application server
+* able to install and use [ffmpeg](https://ffmpeg.org/), generally as a system package
+* long-running HTTP requests, often over 60s
+* streaming HTTP responses aka "hanging GETs"
+* >= 1G memory
+* >= 2G disk (largest output file in Dec 2019 was 1.7G)
+
+When I investigated in Jan 2020, many of the major serverless PaaS hosts didn't support all of these, especially streaming HTTP responses, since they often have a frontend in front of the application server that buffers entire HTTP responses before returning them.
+
+* [AWS Lambda](https://aws.amazon.com/lambda/): [only 512MB disk](https://docs.aws.amazon.com/lambda/latest/dg/running-lambda-code.html); [Java supports streaming](https://docs.aws.amazon.com/lambda/latest/dg/java-handler-io-type-stream.html), other languages unclear
+* [Google Cloud Run](https://cloud.google.com/run/): [no streaming](https://cloud.google.com/run/docs/issues#grpc_websocket)
+* [App Engine Standard](https://cloud.google.com/appengine/docs/standard/): [no streaming](https://cloud.google.com/appengine/docs/standard/python3/how-requests-are-handled#streaming_responses) or system packages
+* [App Engine Flexible](https://cloud.google.com/appengine/docs/flexible/): pricing is a bit prohibitive, ~$40/mo minimum
+* [Azure Functions](https://azure.microsoft.com/en-us/services/functions/) and [App Service](https://azure.microsoft.com/en-us/services/app-service/): [seems like no streaming or system packages](https://docs.microsoft.com/en-us/azure/app-service/overview), but hard to tell for sure
+
+Most other smaller serverless hosts (eg [Heroku](https://www.heroku.com/python), [Zeit](https://zeit.co/now), [Serverless](https://serverless.com/)) don't allow installing system packages like ffmpeg or support streaming HTTP responses either.
+
+
 ## Cost and storage
 
 [I track monthly costs here.](https://docs.google.com/spreadsheets/d/1L578Dvfgi5UJpDM_Gy65Mu8iI0rKAXGB32R0DXuypVc/edit#gid=1172964992) They come from [this B2 billing page](https://secure.backblaze.com/billing.htm), and before that, [this AWS billing page](https://console.aws.amazon.com/billing/home?region=us-west-2#/paymenthistory/history?redirected). The [B2 bucket web UI](https://secure.backblaze.com/b2_buckets.htm) shows the current total number of files and total bytes stored in the `huffduff-video` bucket.
