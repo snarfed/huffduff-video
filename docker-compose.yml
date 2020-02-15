@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+  nginx:
+    image: nginx
+    volumes:
+      - ./static:/usr/share/nginx/html
+    ports:
+      - "8080:80"
+
+  gunicorn:
+    build: .
+    environment:
+      - WORKERS=${WORKERS}
+      - PORT=${PORT}
+      - B2_BUCKET=${B2_BUCKET}
+      - B2_APP_KEY=${B2_APP_KEY}
+      - B2_KEY_ID=${B2_KEY_ID}
+    ports:
+      - "${PORT}:${PORT}"

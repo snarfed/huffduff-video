@@ -47,9 +47,9 @@ def read(filename):
   with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), filename)) as f:
     return f.read().strip()
 
-B2_KEY_ID = read('b2_key_id')
-B2_APP_KEY = read('b2_app_key')
-B2_BUCKET = 'huffduff-video'
+B2_KEY_ID = os.environ['B2_KEY_ID']
+B2_APP_KEY = os.environ['B2_APP_KEY']
+B2_BUCKET = os.environ['B2_BUCKET']
 B2_BASE = 'https://f000.backblazeb2.com/file/%s/' % B2_BUCKET
 
 DOMAIN_BLACKLIST = frozenset((

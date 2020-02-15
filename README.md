@@ -133,6 +133,18 @@ EOF
 crontab crontab
 ```
 
+## running it locally using Docker
+
+* You will have to provide your own Backblaze bucket, key id and app key.
+* Copy `.env.example` to `.env` and fill it in with your data
+    ```
+    cp .env.example .env
+    ```
+* run it: 
+    `docker-compose up`
+* open it: on http://localhost:8080
+  * nginx (frontend) is running on port 8080
+  * gunicorn (backend) will be running on the port specified in the `.env ` file
 
 ## Monitoring
 
