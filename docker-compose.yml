@@ -13,8 +13,5 @@ services:
     environment:
       - WORKERS=${WORKERS}
       - PORT=${PORT}
-      - B2_BUCKET=${B2_BUCKET}
-      - B2_APP_KEY=${B2_APP_KEY}
-      - B2_KEY_ID=${B2_KEY_ID}
     ports:
       - "${PORT}:${PORT}"
