@@ -11,6 +11,7 @@ License: this project is placed in the public domain. Alternatively, you may use
 
 ## Related projects
 
+* [Podify](https://www.podify.org/) is a self-hosted app that also serves feeds of the generated MP3 files. Also backed by youtube-dl.
 * [youtube-dl-api-server](https://github.com/jaimeMF/youtube-dl-api-server) is a web front-end that uses youtube-dl to extract and return a video's metadata.
 * [Flask webapp and Chrome extension](https://charlesleifer.com/blog/a-flask-front-end-and-chrome-extension-for-youtube-dl/) for using youtube-dl to download a video to local disk.
 * [iOS workflow](http://www.512pixels.net/blog/2014/12/from-youtube-to-huffduffer-with-workflow) that does the same thing as huffduff-video, except all client side: downloads a YouTube video, converts it to MP3, uploads the MP3 to Dropbox, and passes it to Huffduffer.
