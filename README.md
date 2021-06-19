@@ -50,7 +50,7 @@ I originally used AWS S3 instead of B2, but S3 eventually got too expensive. As 
 
 ## System setup
 
-Currently on an [AWS EC2 t2.micro instance](https://aws.amazon.com/ec2/instance-types/) on [Ubuntu 18](https://help.ubuntu.com/lts/serverguide/).
+Currently on an [AWS EC2 t2.micro instance](https://aws.amazon.com/ec2/instance-types/) on [Ubuntu 20](https://ubuntu.com/server/docs).
 
 I started it originally on a t2.micro. I migrated it to a t2.nano on 2016-03-24, but usage outgrew the nano's CPU quota, so I migrated back to a t2.micro on 2016-05-25.
 
