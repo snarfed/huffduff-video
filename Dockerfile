@@ -12,7 +12,7 @@ WORKDIR $APP_HOME
 COPY . ./
 
 # Install production dependencies.
-RUN pip install b2sdk webob youtube-dl gunicorn
+RUN pip install b2sdk gunicorn requests webob youtube-dl
 RUN apt-get update -y && apt-get install -y ffmpeg && apt-get clean
 
 # Run the web service on container startup. Here we use the gunicorn

@@ -27,11 +27,12 @@ huffduff-video has a few specific requirements that make it a bit harder than us
 * streaming HTTP responses aka "hanging GETs"
 * >= 1G memory
 * >= 2G disk (largest output file in Dec 2019 was 1.7G)
+* Lots of egress bandwidth, often >200G/mo
 
-When I investigated in Jan 2020, many of the major serverless PaaS hosts didn't support all of these, especially streaming HTTP responses, since they often have a frontend in front of the application server that buffers entire HTTP responses before returning them.
+Many of the major serverless PaaS hosts didn't/don't support all of these, especially streaming HTTP responses, since they often have a frontend in front of the application server that buffers entire HTTP responses before returning them.
 
-* [AWS Lambda](https://aws.amazon.com/lambda/): [only 512MB disk](https://docs.aws.amazon.com/lambda/latest/dg/running-lambda-code.html); [Java supports streaming](https://docs.aws.amazon.com/lambda/latest/dg/java-handler-io-type-stream.html), other languages unclear
-* [Google Cloud Run](https://cloud.google.com/run/): [no streaming](https://cloud.google.com/run/docs/issues#grpc_websocket)
+* [AWS Lambda](https://aws.amazon.com/lambda/): [only 512MB disk](https://docs.aws.amazon.com/lambda/latest/dg/running-lambda-code.html) but [can use EFS for more](https://aws.amazon.com/blogs/aws/new-a-shared-file-system-for-your-lambda-functions/); [Java supports streaming](https://docs.aws.amazon.com/lambda/latest/dg/java-handler-io-type-stream.html), other languages unclear; [expensive-ish egress bandwidth](https://aws.amazon.com/ec2/pricing/on-demand/) ($.09/G)
+* [Google Cloud Run](https://cloud.google.com/run/): ~[no streaming](https://cloud.google.com/run/docs/issues#grpc_websocket)~ [now supports streaming!](https://cloud.google.com/blog/products/serverless/cloud-run-now-supports-http-grpc-server-streaming) [In memory file system though](https://cloud.google.com/run/docs/reference/container-contract#filesystem), which gets expensive; [expensive-ish egress bandwidth](https://cloud.google.com/network-tiers/pricing#premium-pricing) ($.085/G)
 * [App Engine Standard](https://cloud.google.com/appengine/docs/standard/): [no streaming](https://cloud.google.com/appengine/docs/standard/python3/how-requests-are-handled#streaming_responses) or system packages
 * [App Engine Flexible](https://cloud.google.com/appengine/docs/flexible/): pricing is a bit prohibitive, ~$40/mo minimum
 * [Azure Functions](https://azure.microsoft.com/en-us/services/functions/) and [App Service](https://azure.microsoft.com/en-us/services/app-service/): [seems like no streaming or system packages](https://docs.microsoft.com/en-us/azure/app-service/overview), but hard to tell for sure
