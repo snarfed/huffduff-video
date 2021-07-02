@@ -138,11 +138,9 @@ crontab crontab
 
 ## Monitoring
 
-I use [Google Stackdriver](https://app.google.stackdriver.com/) to monitor huffduff-video with black box HTTP probes to its home page. If enough of them fail in a given time window, it emails me.
+I use [Honeycomb](https://www.honeycomb.io/) to monitor huffduff-video with black box HTTP probes to its home page. If enough of them fail in a given time window, it emails me.
 
-I used to use [CloudWatch](https://console.aws.amazon.com/cloudwatch/) to monitor and alarm on EC2 instance system checks, billing thresholds, HTTP logs, and application level exceptions. When alarms fired, it emailed and SMSed me.
-
-The [monitoring alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-west-2) were in us-west-2 (Oregon), but the [billing alarms](https://console.aws.amazon.com/cloudwatch/home?region=us-east-1) had to be in us-east-1 (Virginia). Each region has its own SNS topic for notifications: [us-east-1](https://console.aws.amazon.com/sns/v2/home?region=us-east-1#/topics/arn:aws:sns:us-east-1:996569606388:NotifyMe) [us-west-2](https://console.aws.amazon.com/sns/v2/home?region=us-west-2#/topics/arn:aws:sns:us-west-2:996569606388:huffduff-video)
+I use [CloudWatch](https://console.aws.amazon.com/cloudwatch/) to monitor and alert on EC2 instance system checks and CPU quota. When alarms fire, it emails me.
 
 
 ### System metrics
