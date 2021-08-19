@@ -2,7 +2,7 @@
 
 Extracts the audio from videos on YouTube, Vimeo, and [many more sites](http://rg3.github.io/youtube-dl/supportedsites.html) and sends it to [Huffduffer](http://huffduffer.com/).
 
-See [huffduff-video.snarfed.org](https://huffduff-video.snarfed.org/) for bookmarklet and usage details.
+See [huffduff-video.snarfed.org](http://huffduff-video.snarfed.org/) for bookmarklet and usage details.
 
 Uses [youtube-dl](http://rg3.github.io/youtube-dl/) to download the video and extract its audio track. Stores the resulting MP3 file in [Backblaze B2](https://www.backblaze.com/b2/).
 
