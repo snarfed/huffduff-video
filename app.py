@@ -21,7 +21,7 @@ from b2sdk.progress import AbstractProgressListener
 import requests
 import webob
 import webob.exc
-import youtube_dl
+import yt_dlp
 
 HTML_HEADER = """\
 <!DOCTYPE html>
@@ -139,7 +139,7 @@ def application(environ, start_response):
       }],
       'progress_hooks': [download_progress_hook],
     }
-    ydl = youtube_dl.YoutubeDL(options)
+    ydl = yt_dlp.YoutubeDL(options)
     with handle_errors(write):
       info = ydl.extract_info(url, download=False)
 
@@ -176,7 +176,7 @@ def application(environ, start_response):
       # download video and extract mp3
       yield 'Downloading (this can take a while)...<br />\n'.encode()
       with handle_errors(write):
-        youtube_dl.YoutubeDL(options).download([url])
+        yt_dlp.YoutubeDL(options).download([url])
 
       # upload to B2
       yield 'Uploading to B2...<br />\n'.encode()
@@ -237,14 +237,14 @@ window.location = "https://huffduffer.com/add?popup=true&%s";
 
 @contextlib.contextmanager
 def handle_errors(write):
-  """Wraps youtube_dl calls in a try/except and handles errors."""
+  """Wraps yt_dlp calls in a try/except and handles errors."""
   try:
     yield
   except Exception as e:
     write('<p>%s</p>\n' % e)
-    if isinstance(e, (youtube_dl.DownloadError, youtube_dl.utils.ExtractorError)):
+    if isinstance(e, (yt_dlp.DownloadError, yt_dlp.utils.ExtractorError)):
       write("""\
-Here are the <a href="http://rg3.github.io/youtube-dl/supportedsites.html">
+Here are the <a href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md">
 supported sites</a>. If this site isn't supported, it may also post
 its videos on YouTube. Try there!
 """)

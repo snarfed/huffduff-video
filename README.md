@@ -1,17 +1,17 @@
 # huffduff-video
 
-Extracts the audio from videos on YouTube, Vimeo, and [many more sites](http://rg3.github.io/youtube-dl/supportedsites.html) and sends it to [Huffduffer](http://huffduffer.com/).
+Extracts the audio from videos on YouTube, Vimeo, and [many more sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) and sends it to [Huffduffer](http://huffduffer.com/).
 
 See [huffduff-video.snarfed.org](http://huffduff-video.snarfed.org/) for bookmarklet and usage details.
 
-Uses [youtube-dl](http://rg3.github.io/youtube-dl/) to download the video and extract its audio track. Stores the resulting MP3 file in [Backblaze B2](https://www.backblaze.com/b2/).
+Uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) to download the video and extract its audio track. Stores the resulting MP3 file in [Backblaze B2](https://www.backblaze.com/b2/).
 
 License: this project is placed in the public domain. Alternatively, you may use it under the [CC0 license](http://creativecommons.org/publicdomain/zero/1.0/).
 
 
 ## Related projects
 
-* [Podify](https://www.podify.org/) is a self-hosted app that also serves feeds of the generated MP3 files. Also backed by youtube-dl.
+* [Podify](https://www.podify.org/) is a self-hosted app that also serves feeds of the generated MP3 files. Backed by youtube-dl.
 * [youtube-dl-api-server](https://github.com/jaimeMF/youtube-dl-api-server) is a web front-end that uses youtube-dl to extract and return a video's metadata.
 * [Flask webapp and Chrome extension](https://charlesleifer.com/blog/a-flask-front-end-and-chrome-extension-for-youtube-dl/) for using youtube-dl to download a video to local disk.
 * [iOS workflow](http://www.512pixels.net/blog/2014/12/from-youtube-to-huffduffer-with-workflow) that does the same thing as huffduff-video, except all client side: downloads a YouTube video, converts it to MP3, uploads the MP3 to Dropbox, and passes it to Huffduffer.
@@ -86,7 +86,7 @@ sudo chsh ubuntu
 # install and set up huffduff-video
 cd ~/src
 git clone https://github.com/snarfed/huffduff-video.git
-sudo pip3 install b2sdk boto webob youtube-dl
+sudo pip3 install b2sdk webob yt-dlp
 
 # add these lines to /etc/httpd/conf/httpd.conf
 #
@@ -127,8 +127,8 @@ cd
 cat > ~/crontab << EOF
 # clean up /tmp every hour
 0 * * * *  find /tmp/ -user www-data -not -newermt yesterday | xargs rm
-# auto upgrade youtube-dl daily
-10 10 * * *  sudo pip3 install -U youtube-dl; sudo service apache2 restart
+# auto upgrade yt-dlp daily
+10 10 * * *  sudo pip3 install -U yt-dlp; sudo service apache2 restart
 # recopy robots.txt to S3 since our bucket expiration policy deletes it monthly
 1 2 3 * *  aws s3 cp --acl=public-read ~/src/huffduff-video/s3_robots.txt s3://huffduff-video/robots.txt
 EOF
