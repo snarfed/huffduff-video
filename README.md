@@ -2,7 +2,7 @@
 
 Extracts the audio from videos on YouTube, Vimeo, and [many more sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) and sends it to [Huffduffer](http://huffduffer.com/).
 
-See [huffduff-video.snarfed.org](http://huffduff-video.snarfed.org/) for bookmarklet and usage details.
+See [huffduff-video.snarfed.org](https://huffduff-video.snarfed.org/) for bookmarklet and usage details.
 
 Uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) to download the video and extract its audio track. Stores the resulting MP3 file in [Backblaze B2](https://www.backblaze.com/b2/).
 
@@ -133,6 +133,18 @@ cat > ~/crontab << EOF
 1 2 3 * *  aws s3 cp --acl=public-read ~/src/huffduff-video/s3_robots.txt s3://huffduff-video/robots.txt
 EOF
 crontab crontab
+```
+
+
+## SSL
+
+I followed the [Certbot Apache instructions](https://certbot.eff.org/instructions?ws=apache&os=ubuntufocal) to mint an SSL certificate, install it, and set up a cron job to renew it every 3 months:
+
+```sh
+sudo snap install core; sudo snap refresh core
+sudo snap install --classic certbot
+sudo certbot --apache
+# answer questions; domain is huffduff-video.snarfed.org
 ```
 
 
