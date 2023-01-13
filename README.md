@@ -19,7 +19,7 @@ License: this project is placed in the public domain. Alternatively, you may use
 
 ## Requirements
 
-huffduff-video has a few specific requirements that make it a bit harder than usual to ffind a host, so right now it's on a full VM, on AWS EC2. I'd love to switch to a serverless/containerized host instead, but I haven't found one that satisfies all of the requirements yet:
+huffduff-video has a few specific requirements that make it a bit harder than usual to find a host, so right now it's on a full VM, on AWS EC2. I'd love to switch to a serverless/containerized host instead, but I haven't found one that satisfies all of the requirements yet:
 
 * Python 3 WSGI application server
 * able to install and use [ffmpeg](https://ffmpeg.org/), generally as a system package
