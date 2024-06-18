@@ -18,6 +18,7 @@ import urllib.parse
 from b2sdk.account_info.in_memory import InMemoryAccountInfo
 from b2sdk.api import B2Api
 from b2sdk.progress import AbstractProgressListener
+import boto.ec2.cloudwatch
 import requests
 import webob
 import webob.exc
@@ -84,6 +85,23 @@ def application(environ, start_response):
     return webob.exc.HTTPBadRequest(
       'Sorry, this content is not currently supported due to copyright.')(
         environ, start_response)
+
+  # check that our CPU credit balance isn't too low
+  try:
+    cloudwatch = boto.ec2.cloudwatch.connect_to_region('us-east-2')
+    for metric in cloudwatch.list_metrics(metric_name='CPUCreditBalance'):
+      if metric.name == 'CPUCreditBalance':
+        stats = metric.query(datetime.datetime.now() - datetime.timedelta(minutes=10),
+                             datetime.datetime.now(), ['Average'])
+        if stats:
+          credit = stats[-1].get('Average')
+          if credit and credit <= 30:
+            msg = "Sorry, we're too busy right now. Please try again later!"
+            exc = webob.exc.HTTPServiceUnavailable(msg)
+            exc.html_template_obj = Template(HTML_HEADER + msg + HTML_FOOTER)
+            return exc(environ, start_response)
+  except:
+    logging.exception("Couldn't fetch CPU credit balance from CloudWatch!")
 
   write_fn = start_response('200 OK', headers)
   def write(line):
