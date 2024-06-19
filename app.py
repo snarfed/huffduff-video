@@ -58,6 +58,8 @@ DOMAIN_BLACKLIST = frozenset((
   'www.bbc.com',
 ))
 
+MAX_OS_LOAD = 5
+
 # ffmpeg on Ryan's laptop is installed in /usr/local/bin, so add it to PATH.
 if '/usr/local/bin' not in os.environ['PATH']:
   os.environ['PATH'] += ':/usr/local/bin'
@@ -86,22 +88,36 @@ def application(environ, start_response):
       'Sorry, this content is not currently supported due to copyright.')(
         environ, start_response)
 
-  # check that our CPU credit balance isn't too low
-  try:
-    cloudwatch = boto.ec2.cloudwatch.connect_to_region('us-east-2')
-    for metric in cloudwatch.list_metrics(metric_name='CPUCreditBalance'):
-      if metric.name == 'CPUCreditBalance':
-        stats = metric.query(datetime.datetime.now() - datetime.timedelta(minutes=10),
-                             datetime.datetime.now(), ['Average'])
-        if stats:
-          credit = stats[-1].get('Average')
-          if credit is not None and credit <= 30:
-            msg = "Sorry, we're too busy right now. Please try again later!"
-            exc = webob.exc.HTTPServiceUnavailable(msg)
-            exc.html_template_obj = Template(HTML_HEADER + msg + HTML_FOOTER)
-            return exc(environ, start_response)
-  except:
-    logging.exception("Couldn't fetch CPU credit balance from CloudWatch!")
+  # OBSOLETE: check that our CPU credit balance isn't too low.
+  #
+  # we used to do this, but we now have CPU credit "unlimited mode" enabled to
+  # allow using arbitrary CPU credit that's just billed to us, so we don't want
+  # to stop based on CPU credit balance. instead, we look at OS load, below.
+  # https://docs.aws.amazon.com/en_us/console/ec2//instances/burstable-performance-instances/unlimited
+  #
+  # try:
+  #   cloudwatch = boto.ec2.cloudwatch.connect_to_region('us-east-2')
+  #   for metric in cloudwatch.list_metrics(metric_name='CPUCreditBalance'):
+  #     if metric.name == 'CPUCreditBalance':
+  #       stats = metric.query(datetime.datetime.now() - datetime.timedelta(minutes=10),
+  #                            datetime.datetime.now(), ['Average'])
+  #       if stats:
+  #         credit = stats[-1].get('Average')
+  #         if credit is not None and credit <= 30:
+  #           msg = "Sorry, we're too busy right now. Please try again later!"
+  #           exc = webob.exc.HTTPServiceUnavailable(msg)
+  #           exc.html_template_obj = Template(HTML_HEADER + msg + HTML_FOOTER)
+  #           return exc(environ, start_response)
+  # except:
+  #   logging.exception("Couldn't fetch CPU credit balance from CloudWatch!")
+
+  # check OS load, don't start job if we're too busy
+  _, five_min, one_min = os.getloadavg()
+  if five_min > MAX_OS_LOAD and one_min > MAX_OS_LOAD:
+    msg = "Sorry, we're too busy right now. Please try again soon!"
+    exc = webob.exc.HTTPServiceUnavailable(msg)
+    exc.html_template_obj = Template(HTML_HEADER + msg + HTML_FOOTER)
+    return exc(environ, start_response)
 
   write_fn = start_response('200 OK', headers)
   def write(line):
