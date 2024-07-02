@@ -86,7 +86,8 @@ sudo chsh ubuntu
 # install and set up huffduff-video
 cd ~/src
 git clone https://github.com/snarfed/huffduff-video.git
-sudo pip3 install b2sdk webob yt-dlp
+cd huffduff-video
+sudo pip3 install -r requirements.txt
 
 # add these lines to /etc/httpd/conf/httpd.conf
 #
@@ -135,6 +136,21 @@ EOF
 crontab crontab
 ```
 
+### Upgrading OS
+
+huffduff-video is pretty small and simple, it doesn't have many unusual dependencies or needs, so I've generally had good luck using Ubuntu's [`do-release-upgrade`](https://askubuntu.com/questions/409555/what-does-do-release-upgrade-really-do) tool to [upgrade from one Ubuntu LTS version to the next](https://ubuntu.com/server/docs/how-to-upgrade-your-release) ([more](https://help.ubuntu.com/community/Upgrades), [even more](https://help.ubuntu.com/community/UpgradeNotes)):
+
+```sh
+sudo apt-get update
+sudo apt-get upgrade
+sudo do-release-upgrade
+```
+
+Python installed packages may disappear, make sure to reinstall those with sudo! Otherwise Apache's mod_wsgi won't see them, or will see older versions.
+
+```
+sudo pip3 install -r requirements.txt
+```
 
 ## SSL
 

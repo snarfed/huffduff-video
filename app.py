@@ -15,9 +15,10 @@ from string import Template
 import sys
 import urllib.parse
 
-from b2sdk.account_info.in_memory import InMemoryAccountInfo
-from b2sdk.api import B2Api
-from b2sdk.progress import AbstractProgressListener
+# https://github.com/Backblaze/b2-sdk-python/blob/master/CHANGELOG.md#changed-2
+from b2sdk.v1 import InMemoryAccountInfo
+from b2sdk.v1.api import B2Api
+from b2sdk._internal.progress import AbstractProgressListener
 import boto.ec2.cloudwatch
 import requests
 import webob
