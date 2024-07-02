@@ -136,6 +136,18 @@ EOF
 crontab crontab
 ```
 
+
+### Local development
+
+It's possible to set Apache up on macOS to run Python like the production Linux setup, eg with Homebrew Apache and UWSGI, but it's a bit complicated. The simpler approach is to make a virtualenv, install `requirements.txt` and `gunicorn` in it, and then run `appp.py` under `gunicorn` with eg :
+
+```sh
+gunicorn --workers 1 --threads 10 -b :8080 app
+```
+
+The app will serve on [localhost:8080](http://localhost:8080/). Run with eg http://localhost:8080/?url=...
+
+
 ### Upgrading OS
 
 huffduff-video is pretty small and simple, it doesn't have many unusual dependencies or needs, so I've generally had good luck using Ubuntu's [`do-release-upgrade`](https://askubuntu.com/questions/409555/what-does-do-release-upgrade-really-do) tool to [upgrade from one Ubuntu LTS version to the next](https://ubuntu.com/server/docs/how-to-upgrade-your-release) ([more](https://help.ubuntu.com/community/Upgrades), [even more](https://help.ubuntu.com/community/UpgradeNotes)):
@@ -151,6 +163,7 @@ Python installed packages may disappear, make sure to reinstall those with sudo!
 ```
 sudo pip3 install -r requirements.txt
 ```
+
 
 ## SSL
 
