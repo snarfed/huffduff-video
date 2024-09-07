@@ -1,5 +1,5 @@
-b2sdk==1.9.0
+b2sdk==2.5.1
 boto==2.49.0
 requests==2.32.3
-WebOb==1.8.7
+WebOb==1.8.8
 yt-dlp>=2024.5.27

@@ -4,16 +4,22 @@
 #
 # Uses the official lightweight Python image.
 # https://hub.docker.com/_/python
-FROM python:3.7-slim
+FROM python:3.10-slim
 
-# Copy local code to the container image.
+# Install production dependencies: ffmpeg & gunicorn
+RUN apt-get update -y && apt-get install -y ffmpeg && apt-get clean
+RUN pip install --upgrade pip
+RUN pip install gunicorn
+
 ENV APP_HOME /app
 WORKDIR $APP_HOME
-COPY . ./
 
 # Install production dependencies.
-RUN pip install b2sdk gunicorn requests webob yt-dlp
-RUN apt-get update -y && apt-get install -y ffmpeg && apt-get clean
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+
+# Copy local code to the container image.
+COPY . ./
 
 # Run the web service on container startup. Here we use the gunicorn
 # webserver, with one worker process and 8 threads.
