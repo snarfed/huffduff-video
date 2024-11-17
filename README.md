@@ -1,5 +1,9 @@
 # huffduff-video
 
+<b><a href="https://github.com/snarfed/huffduff-video/issues/52#issuecomment-2369160227">huffduff-video has been decommissioned.</a> So long, and thanks for all the fish!
+
+For alternatives, check out <a href="https://breadcrum.net/">Breadcrum</a>, <a href="https://podqueue.fm/">PodQueue</a>, <a href="https://www.podify.org/">Podify</a>, and <a href="https://youtube-dl-api-server.readthedocs.io/">youtube-dl-api-server</a>.</b>
+
 Extracts the audio from videos on YouTube, Vimeo, and [many more sites](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md) and sends it to [Huffduffer](http://huffduffer.com/).
 
 See [huffduff-video.snarfed.org](https://huffduff-video.snarfed.org/) for bookmarklet and usage details.
